@@ -447,19 +447,62 @@ button {
 
 .log-form { display: flex; flex-direction: column; gap: 20px; }
 
+.log-form.is-locked input:disabled { color: var(--ink-soft); cursor: default; }
+.log-form.is-locked .meal-input:has(input:disabled) { opacity: .8; }
+.status-toggle:disabled { opacity: .55; cursor: default; }
+
 .log-section-title {
   font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
   color: var(--ink-faint); margin: 4px 0 -6px;
 }
 .log-section-hint { font-weight: 500; text-transform: none; letter-spacing: 0; }
 
-.log-field label { display: block; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-faint); margin-bottom: 7px; }
-.log-field input[type="date"] {
-  width: 100%; padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border);
-  background: var(--surface); color: var(--ink); font-family: inherit; font-size: 14.5px;
+.log-field label { display: block; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-faint); margin-bottom: 9px; }
+
+/* ---- date card (Log Meal) ---- */
+.log-date-card {
+  background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md);
+  padding: 16px 18px; box-shadow: var(--shadow-card);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.log-date-input-wrap {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.log-date-input-wrap svg { width: 17px; height: 17px; color: var(--ink-soft); flex: none; }
+.log-date-input-wrap input[type="date"] {
+  width: 100%; border: none; background: transparent; color: var(--ink); font-family: inherit;
+  font-size: 14.5px; font-weight: 600; padding: 0; -webkit-appearance: none; cursor: pointer;
+}
+.log-date-input-wrap input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: .55; }
+
+.log-edit-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--amber-soft); border-radius: var(--radius-sm); padding: 10px 14px;
+}
+.log-edit-banner[hidden] { display: none; }
+.log-edit-banner span { font-size: 12.5px; font-weight: 600; color: var(--amber); }
+.btn-edit-toggle {
+  border: none; background: var(--amber); color: #fff; font-family: inherit;
+  font-weight: 700; font-size: 12px; padding: 7px 16px; border-radius: 100px; flex: none;
 }
 
+/* ---- Food / Burn / Weight tab bar ---- */
+.log-tabbar {
+  display: flex; gap: 5px; background: var(--bg); border: 1px solid var(--border-soft);
+  padding: 5px; border-radius: 100px;
+}
+.log-tab {
+  flex: 1; border: none; background: transparent; color: var(--ink-soft); font-family: inherit;
+  font-weight: 600; font-size: 13.5px; padding: 10px 10px; border-radius: 100px;
+}
+.log-tab.active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-card); }
+.log-tab-panel { display: flex; flex-direction: column; gap: 20px; }
+.log-tab-panel[hidden] { display: none; }
+
 .meal-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.meal-inputs-single { grid-template-columns: 1fr; }
 .meal-input {
   background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md);
   padding: 14px; box-shadow: var(--shadow-card);
@@ -472,6 +515,7 @@ button {
 .meal-icon.meal-snacks { background: var(--green-soft); color: var(--green); }
 .meal-icon.meal-burn { background: var(--green-soft); color: var(--green); }
 .meal-icon.meal-exercise { background: var(--blue-soft); color: var(--blue); }
+.meal-icon.meal-weight { background: var(--teal-soft); color: var(--teal-strong); }
 
 /* ---- day status toggles ---- */
 .status-toggle-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }

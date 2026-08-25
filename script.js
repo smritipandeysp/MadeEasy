@@ -30,6 +30,14 @@ function shortDate(s) { return parseDate(s).toLocaleDateString('en-US', { day: '
 function clamp01(x) { return Math.max(0, Math.min(1, x)); }
 function isDark() { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; }
 
+// red below 50% of target, amber while closing in, green at 100%+
+function tierColor(rawPct) {
+  if (rawPct == null || isNaN(rawPct)) return 'var(--neutral)';
+  if (rawPct >= 1) return 'var(--good)';
+  if (rawPct >= 0.5) return 'var(--amber)';
+  return 'var(--bad)';
+}
+
 function sumMeals(r) {
   const parts = [r.breakfast, r.lunch, r.dinner, r.snacks];
   if (parts.every(p => p == null)) return null;
@@ -77,8 +85,12 @@ function weightAsOf(idx) {
 // ---------------------------------------------------------------
 function chartColors() {
   return isDark()
-    ? { eaten: '#A83F88', burned: '#409552', weight: '#9469BF', goal: '#B56D00', grid: 'rgba(255,255,255,.08)', tick: '#B6AFC6' }
-    : { eaten: '#E54B5F', burned: '#6DBE7B', weight: '#7A4FA3', goal: '#C97F1A', grid: 'rgba(38,34,52,.06)', tick: '#6E6780' };
+    ? { eaten: '#A83F88', burned: '#409552', weight: '#9469BF', goal: '#B56D00',
+        breakfast: '#B56D00', lunch: '#A83F88', dinner: '#9469BF', snacks: '#409552',
+        grid: 'rgba(255,255,255,.08)', tick: '#B6AFC6' }
+    : { eaten: '#E54B5F', burned: '#6DBE7B', weight: '#7A4FA3', goal: '#C97F1A',
+        breakfast: '#C97F1A', lunch: '#E54B5F', dinner: '#7A4FA3', snacks: '#6DBE7B',
+        grid: 'rgba(38,34,52,.06)', tick: '#6E6780' };
 }
 
 // ---------------------------------------------------------------
@@ -117,7 +129,10 @@ function computeStreakAsOf(idx) {
 // ---------------------------------------------------------------
 function aggregate(range) {
   if (range === 'day') {
-    return DATA.map(r => ({ label: r.date.slice(5), eaten: r.eaten, burned: r.burned, weight: r.weight }));
+    return DATA.map(r => ({
+      label: r.date.slice(5), eaten: r.eaten, burned: r.burned, weight: r.weight,
+      breakfast: r.breakfast, lunch: r.lunch, dinner: r.dinner, snacks: r.snacks
+    }));
   }
   const buckets = {};
   DATA.forEach(r => {
@@ -129,17 +144,24 @@ function aggregate(range) {
     } else {
       key = r.date.slice(0, 7);
     }
-    if (!buckets[key]) buckets[key] = { eaten: [], burned: [], weight: null };
+    if (!buckets[key]) buckets[key] = { eaten: [], burned: [], weight: null, breakfast: [], lunch: [], dinner: [], snacks: [] };
     if (!r.vacay) {
       if (r.eaten != null) buckets[key].eaten.push(r.eaten);
       if (r.burned != null) buckets[key].burned.push(r.burned);
+      if (r.breakfast != null) buckets[key].breakfast.push(r.breakfast);
+      if (r.lunch != null) buckets[key].lunch.push(r.lunch);
+      if (r.dinner != null) buckets[key].dinner.push(r.dinner);
+      if (r.snacks != null) buckets[key].snacks.push(r.snacks);
     }
     if (r.weight != null) buckets[key].weight = r.weight;
   });
   const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
   return Object.keys(buckets).sort().map(k => {
     const b = buckets[k];
-    return { label: k, eaten: avg(b.eaten), burned: avg(b.burned), weight: b.weight };
+    return {
+      label: k, eaten: avg(b.eaten), burned: avg(b.burned), weight: b.weight,
+      breakfast: avg(b.breakfast), lunch: avg(b.lunch), dinner: avg(b.dinner), snacks: avg(b.snacks)
+    };
   });
 }
 
@@ -316,8 +338,8 @@ function renderTargets() {
   const weekBurned = recentAvg('burned', 7) ?? 0;
   const monthBurned = recentAvg('burned', 30) ?? 0;
 
-  const eatBar = (val) => ({ label: 'Eat', pct: clamp01(val / t.targetEatDaily), color: 'var(--pink)' });
-  const burnBar = (val) => ({ label: 'Burn', pct: clamp01(val / t.targetBurnDaily), color: 'var(--green)' });
+  const eatBar = (val) => { const raw = t.targetEatDaily ? val / t.targetEatDaily : 0; return { label: 'Eat', pct: clamp01(raw), color: tierColor(raw) }; };
+  const burnBar = (val) => { const raw = t.targetBurnDaily ? val / t.targetBurnDaily : 0; return { label: 'Burn', pct: clamp01(raw), color: tierColor(raw) }; };
 
   const cards = [
     {
@@ -341,7 +363,7 @@ function renderTargets() {
     {
       accent: 'var(--green)', period: 'At this pace', title: 'To goal',
       rows: [['Weeks to goal', fmt(t.weeksAtSafePace, 1)], ['Current BMI', fmt(t.curW / ((HEIGHT_CM / 100) ** 2), 1)], ['Goal BMI', fmt(GOAL_WEIGHT / ((HEIGHT_CM / 100) ** 2), 1)]],
-      bars: [{ label: 'To goal', pct: clamp01(lostSoFar / totalToLose), color: 'var(--teal)' }],
+      bars: [{ label: 'To goal', pct: clamp01(lostSoFar / totalToLose), color: tierColor(lostSoFar / totalToLose) }],
       foot: `${fmt(t.toGo, 1)} kg to go`
     }
   ];
@@ -499,6 +521,38 @@ function renderCalOverviewChart() {
 }
 
 // ---------------------------------------------------------------
+// Render: meal breakdown chart (breakfast / lunch / dinner / snacks)
+// ---------------------------------------------------------------
+let mealRange = 'day';
+function renderMealBreakdownChart() {
+  const cc = chartColors();
+  const agg = aggregate(mealRange);
+  const labels = agg.map(r => r.label);
+
+  destroyChart('mealBreakdown');
+  charts.mealBreakdown = new Chart(document.getElementById('mealBreakdownChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Breakfast', data: agg.map(r => r.breakfast), backgroundColor: cc.breakfast, stack: 'meals', borderRadius: 3, maxBarThickness: 26 },
+        { label: 'Lunch', data: agg.map(r => r.lunch), backgroundColor: cc.lunch, stack: 'meals', borderRadius: 3, maxBarThickness: 26 },
+        { label: 'Dinner', data: agg.map(r => r.dinner), backgroundColor: cc.dinner, stack: 'meals', borderRadius: 3, maxBarThickness: 26 },
+        { label: 'Snacks', data: agg.map(r => r.snacks), backgroundColor: cc.snacks, stack: 'meals', borderRadius: 3, maxBarThickness: 26 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: cc.tick, usePointStyle: true, boxHeight: 7 } } },
+      scales: {
+        x: { stacked: true, ticks: { color: cc.tick, font: { size: 10 } }, grid: { display: false } },
+        y: { stacked: true, ticks: { color: cc.tick }, grid: { color: cc.grid }, title: { display: true, text: 'kcal', color: cc.tick } }
+      }
+    }
+  });
+}
+
+// ---------------------------------------------------------------
 // Master render
 // ---------------------------------------------------------------
 function renderAll() {
@@ -510,7 +564,7 @@ function renderAll() {
   renderRecentLog();
   renderWeightTrendChart();
   renderCalOverviewChart();
-  updateLogDefaultDate();
+  renderMealBreakdownChart();
 }
 
 // ---------------------------------------------------------------
@@ -530,7 +584,7 @@ function switchView(view) {
 function wireNav() {
   document.querySelectorAll('[data-nav]:not(.is-disabled)').forEach(el => {
     el.addEventListener('click', () => {
-      if (el.dataset.view === 'log') resetLogForm();
+      if (el.dataset.view === 'log') initLogForm();
       switchView(el.dataset.view);
     });
   });
@@ -552,11 +606,6 @@ function wireToggle(containerId, onChange) {
 // ---------------------------------------------------------------
 // Log Meal form
 // ---------------------------------------------------------------
-function updateLogDefaultDate() {
-  const dateInput = document.getElementById('f_date');
-  if (dateInput && !dateInput.value) dateInput.value = DATA[DATA.length - 1].date;
-}
-
 function updateLogTotal() {
   const b = parseFloat(document.getElementById('f_b').value) || 0;
   const l = parseFloat(document.getElementById('f_l').value) || 0;
@@ -585,27 +634,110 @@ function updateStatusToggleUI() {
 }
 
 function wireStatusToggles() {
-  document.getElementById('toggleVacay').addEventListener('click', () => { logVacay = !logVacay; updateStatusToggleUI(); });
-  document.getElementById('togglePeriod').addEventListener('click', () => { logPeriod = !logPeriod; updateStatusToggleUI(); });
+  document.getElementById('toggleVacay').addEventListener('click', () => {
+    if (document.getElementById('toggleVacay').disabled) return;
+    logVacay = !logVacay; updateStatusToggleUI();
+  });
+  document.getElementById('togglePeriod').addEventListener('click', () => {
+    if (document.getElementById('togglePeriod').disabled) return;
+    logPeriod = !logPeriod; updateStatusToggleUI();
+  });
 }
 
-function resetLogForm() {
-  const form = document.getElementById('logForm');
-  form.reset();
-  document.getElementById('logTotalVal').textContent = '0 kcal';
-  logVacay = false;
-  logPeriod = false;
+// ---- Food / Burn / Weight tabs ----
+function switchLogTab(name) {
+  document.querySelectorAll('.log-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.log-tab-panel').forEach(p => { p.hidden = p.dataset.panel !== name; });
+}
+
+function wireLogTabs() {
+  document.querySelectorAll('.log-tab').forEach(btn => {
+    btn.addEventListener('click', () => switchLogTab(btn.dataset.tab));
+  });
+}
+
+// ---- view-existing-day vs. edit logic ----
+let logEditUnlocked = false;
+
+function dayHasAnyData(r) {
+  if (!r) return false;
+  return sumMeals(r) != null || r.burned != null || r.exerciseBurn != null || r.weight != null;
+}
+
+function setLogFormLocked(locked) {
+  ['f_b', 'f_l', 'f_d', 'f_s', 'f_burn', 'f_exercise', 'f_weight'].forEach(id => {
+    document.getElementById(id).disabled = locked;
+  });
+  document.getElementById('toggleVacay').disabled = locked;
+  document.getElementById('togglePeriod').disabled = locked;
+  document.getElementById('logSubmitBtn').hidden = locked;
+  document.getElementById('logNoteText').hidden = locked;
+  document.getElementById('logForm').classList.toggle('is-locked', locked);
+}
+
+function populateLogFormForDate(date) {
+  const idx = DATA.findIndex(r => r.date === date);
+  const row = idx >= 0 ? DATA[idx] : null;
+  const isToday = date === DATA[DATA.length - 1].date;
+  const hasData = dayHasAnyData(row);
+  const viewMode = hasData && !isToday && !logEditUnlocked;
+
+  document.getElementById('f_b').value = row && row.breakfast != null ? row.breakfast : '';
+  document.getElementById('f_l').value = row && row.lunch != null ? row.lunch : '';
+  document.getElementById('f_d').value = row && row.dinner != null ? row.dinner : '';
+  document.getElementById('f_s').value = row && row.snacks != null ? row.snacks : '';
+  document.getElementById('f_burn').value = row && row.burned != null ? row.burned : '';
+  document.getElementById('f_exercise').value = row && row.exerciseBurn != null ? row.exerciseBurn : '';
+  document.getElementById('f_weight').value = row && row.weight != null ? row.weight : '';
+  logVacay = !!(row && row.vacay);
+  logPeriod = !!(row && row.period);
   updateStatusToggleUI();
-  document.getElementById('f_date').value = '';
-  updateLogDefaultDate();
+  updateLogTotal();
+
+  setLogFormLocked(viewMode);
+
+  const banner = document.getElementById('logEditBanner');
+  const bannerText = document.getElementById('logEditBannerText');
+  const editBtn = document.getElementById('logEditBtn');
+  if (hasData && !isToday) {
+    banner.hidden = false;
+    if (viewMode) {
+      bannerText.textContent = `Showing saved data for ${shortDate(date)}`;
+      editBtn.hidden = false;
+    } else {
+      bannerText.textContent = `Editing saved entry for ${shortDate(date)}`;
+      editBtn.hidden = true;
+    }
+  } else {
+    banner.hidden = true;
+  }
+}
+
+function initLogForm() {
+  logEditUnlocked = false;
+  document.getElementById('f_date').value = DATA[DATA.length - 1].date;
+  switchLogTab('food');
+  populateLogFormForDate(document.getElementById('f_date').value);
 }
 
 function wireLogForm() {
   ['f_b', 'f_l', 'f_d', 'f_s'].forEach(id => document.getElementById(id).addEventListener('input', updateLogTotal));
   wireStatusToggles();
+  wireLogTabs();
+
+  document.getElementById('f_date').addEventListener('change', () => {
+    logEditUnlocked = false;
+    populateLogFormForDate(document.getElementById('f_date').value);
+  });
+
+  document.getElementById('logEditBtn').addEventListener('click', () => {
+    logEditUnlocked = true;
+    populateLogFormForDate(document.getElementById('f_date').value);
+  });
 
   document.getElementById('logForm').addEventListener('submit', e => {
     e.preventDefault();
+    if (document.getElementById('logForm').classList.contains('is-locked')) return;
     const date = document.getElementById('f_date').value;
     if (!date) return;
     const b = parseFloat(document.getElementById('f_b').value) || 0;
@@ -616,8 +748,10 @@ function wireLogForm() {
 
     const burnVal = document.getElementById('f_burn').value;
     const exerciseVal = document.getElementById('f_exercise').value;
+    const weightVal = document.getElementById('f_weight').value;
     const burn = burnVal !== '' ? parseFloat(burnVal) : null;
     const exercise = exerciseVal !== '' ? parseFloat(exerciseVal) : null;
+    const weight = weightVal !== '' ? parseFloat(weightVal) : null;
     const vacay = logVacay;
     const period = logPeriod;
 
@@ -628,14 +762,15 @@ function wireLogForm() {
         burned: finalBurn,
         exerciseBurn: exercise != null ? exercise : DATA[idx].exerciseBurn,
         net: finalBurn != null ? eaten - finalBurn : null,
+        weight: weight != null ? weight : DATA[idx].weight,
         vacay, period };
     } else {
       DATA.push({ date, breakfast: b, lunch: l, dinner: d, snacks: s, eaten,
         exerciseBurn: exercise, burned: burn, net: burn != null ? eaten - burn : null,
-        weight: null, vacay, period });
+        weight, vacay, period });
     }
 
-    resetLogForm();
+    initLogForm();
     viewDate = DATA[DATA.length - 1].date;
     const dateInput = document.getElementById('dateInput');
     if (dateInput) { dateInput.max = viewDate; dateInput.value = viewDate; }
@@ -654,11 +789,13 @@ document.addEventListener('DOMContentLoaded', () => {
   initDatePicker();
   wireToggle('weightRangeToggle', r => { weightRange = r; renderWeightTrendChart(); });
   wireToggle('calRangeToggle', r => { calRange = r; renderCalOverviewChart(); });
+  wireToggle('mealRangeToggle', r => { mealRange = r; renderMealBreakdownChart(); });
   document.getElementById('viewAllBtn').addEventListener('click', () => { showAllLog = !showAllLog; renderRecentLog(); });
+  initLogForm();
 
   if (window.matchMedia) {
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-      renderWeightTrendChart(); renderCalOverviewChart();
+      renderWeightTrendChart(); renderCalOverviewChart(); renderMealBreakdownChart();
     });
   }
 
