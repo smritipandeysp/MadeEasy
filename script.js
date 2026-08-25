@@ -26,6 +26,7 @@ let DATA = [{"date": "2026-06-08", "breakfast": 290, "lunch": 300, "dinner": 480
 function fmt(n, d = 0) { return n === null || n === undefined || isNaN(n) ? '—' : Number(n).toFixed(d); }
 function fmtSigned(n, d = 0) { if (n === null || n === undefined || isNaN(n)) return '—'; const v = Number(n).toFixed(d); return n > 0 ? '+' + v : v; }
 function parseDate(s) { return new Date(s + 'T00:00:00'); }
+function shortDate(s) { return parseDate(s).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }); }
 function clamp01(x) { return Math.max(0, Math.min(1, x)); }
 function isDark() { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; }
 
@@ -33,11 +34,6 @@ function sumMeals(r) {
   const parts = [r.breakfast, r.lunch, r.dinner, r.snacks];
   if (parts.every(p => p == null)) return null;
   return parts.reduce((a, b) => a + (b || 0), 0);
-}
-
-function latestWeight() {
-  for (let i = DATA.length - 1; i >= 0; i--) { if (DATA[i].weight != null) return { w: DATA[i].weight, d: DATA[i].date }; }
-  return { w: START_WEIGHT, d: DATA[0].date };
 }
 
 function avgExclVacay(field) {
@@ -58,19 +54,38 @@ function recentAvg(field, count, exclVacay = true) {
 }
 
 // ---------------------------------------------------------------
+// Viewing date — lets you browse the dashboard "as of" any logged day
+// ---------------------------------------------------------------
+let viewDate = DATA[DATA.length - 1].date;
+
+function getViewIndex() {
+  let idx = DATA.findIndex(r => r.date === viewDate);
+  if (idx >= 0) return idx;
+  for (let i = DATA.length - 1; i >= 0; i--) { if (DATA[i].date <= viewDate) return i; }
+  return 0;
+}
+function isLatestView() { return getViewIndex() === DATA.length - 1; }
+
+// weight as of (and searching back from) a given index
+function weightAsOf(idx) {
+  for (let i = idx; i >= 0; i--) { if (DATA[i].weight != null) return { w: DATA[i].weight, d: DATA[i].date, i }; }
+  return { w: START_WEIGHT, d: DATA[0].date, i: -1 };
+}
+
+// ---------------------------------------------------------------
 // Chart color tokens (theme-aware)
 // ---------------------------------------------------------------
 function chartColors() {
   return isDark()
-    ? { eaten: '#A83F88', burned: '#409552', net: '#2D86C8', weight: '#9469BF', goal: '#B56D00', good: '#409552', bad: '#A83F88', grid: 'rgba(255,255,255,.08)', tick: '#B6AFC6' }
-    : { eaten: '#E54B5F', burned: '#6DBE7B', net: '#1868A0', weight: '#7A4FA3', goal: '#C97F1A', good: '#6DBE7B', bad: '#E54B5F', grid: 'rgba(38,34,52,.06)', tick: '#6E6780' };
+    ? { eaten: '#A83F88', burned: '#409552', weight: '#9469BF', goal: '#B56D00', grid: 'rgba(255,255,255,.08)', tick: '#B6AFC6' }
+    : { eaten: '#E54B5F', burned: '#6DBE7B', weight: '#7A4FA3', goal: '#C97F1A', grid: 'rgba(38,34,52,.06)', tick: '#6E6780' };
 }
 
 // ---------------------------------------------------------------
 // Computed targets (35% eat-less / 65% burn-more split)
 // ---------------------------------------------------------------
 function computeTargets() {
-  const { w: curW } = latestWeight();
+  const { w: curW } = weightAsOf(DATA.length - 1);
   const toGo = curW - GOAL_WEIGHT;
   const avgEaten = avgExclVacay('eaten');
   const avgBurned = avgExclVacay('burned');
@@ -87,11 +102,11 @@ function computeTargets() {
 }
 
 // ---------------------------------------------------------------
-// Streak — consecutive most-recent days with any meal logged
+// Streak — consecutive days with any meal logged, ending at index
 // ---------------------------------------------------------------
-function computeStreak() {
+function computeStreakAsOf(idx) {
   let streak = 0;
-  for (let i = DATA.length - 1; i >= 0; i--) {
+  for (let i = idx; i >= 0; i--) {
     if (sumMeals(DATA[i]) != null) streak++; else break;
   }
   return streak;
@@ -102,7 +117,7 @@ function computeStreak() {
 // ---------------------------------------------------------------
 function aggregate(range) {
   if (range === 'day') {
-    return DATA.map(r => ({ label: r.date.slice(5), eaten: r.eaten, burned: r.burned, net: r.net, weight: r.weight }));
+    return DATA.map(r => ({ label: r.date.slice(5), eaten: r.eaten, burned: r.burned, weight: r.weight }));
   }
   const buckets = {};
   DATA.forEach(r => {
@@ -124,8 +139,7 @@ function aggregate(range) {
   const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
   return Object.keys(buckets).sort().map(k => {
     const b = buckets[k];
-    const e = avg(b.eaten), bnd = avg(b.burned);
-    return { label: k, eaten: e, burned: bnd, net: (e != null && bnd != null) ? e - bnd : null, weight: b.weight };
+    return { label: k, eaten: avg(b.eaten), burned: avg(b.burned), weight: b.weight };
   });
 }
 
@@ -136,102 +150,153 @@ const charts = {};
 function destroyChart(key) { if (charts[key]) { charts[key].destroy(); delete charts[key]; } }
 
 // ---------------------------------------------------------------
-// Render: greeting + date chip
+// Render: greeting (always reflects the real latest entry)
 // ---------------------------------------------------------------
 function renderGreeting() {
-  const today = DATA[DATA.length - 1];
   document.getElementById('greeting').textContent = `Hi ${USER_NAME}! 👋`;
-  const streak = computeStreak();
+  const streak = computeStreakAsOf(DATA.length - 1);
   document.getElementById('greetingSub').textContent =
     streak > 1 ? `You're on a ${streak}-day streak — let's make today count.` : `Let's make today count.`;
-
-  const d = parseDate(today.date);
-  const label = d.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
-  document.getElementById('dateChipLabel').textContent = label;
 }
 
 // ---------------------------------------------------------------
-// Render: hero weight card + sparkline
+// Render: date picker (bounds + value)
 // ---------------------------------------------------------------
-function renderHeroWeight() {
-  const { w: curW, d: curD } = latestWeight();
-  document.getElementById('heroWeightVal').textContent = fmt(curW, 1);
+function initDatePicker() {
+  const input = document.getElementById('dateInput');
+  input.min = DATA[0].date;
+  input.max = DATA[DATA.length - 1].date;
+  input.value = viewDate;
+  input.addEventListener('change', () => {
+    if (!input.value) return;
+    viewDate = input.value;
+    renderSnapshot();
+    renderHeroWeight();
+    renderTargets();
+  });
+}
 
-  const weighed = DATA.filter(r => r.weight != null);
-  const prev = weighed.length > 1 ? weighed[weighed.length - 2].weight : null;
-  const deltaEl = document.getElementById('heroWeightDelta');
-  if (prev != null) {
-    const delta = curW - prev;
-    const arrow = delta <= 0 ? '↓' : '↑';
-    deltaEl.textContent = `${arrow} ${fmt(Math.abs(delta), 1)} kg vs last check-in`;
-  } else {
-    deltaEl.textContent = `Starting weight ${fmt(START_WEIGHT, 1)} kg`;
+// ---------------------------------------------------------------
+// Render: today's summary + streak ("snapshot" for the viewed date)
+// ---------------------------------------------------------------
+function renderSnapshot() {
+  const t = computeTargets();
+  const idx = getViewIndex();
+  const day = DATA[idx];
+  const latest = isLatestView();
+
+  document.getElementById('summaryTitle').textContent = latest ? "Today's summary" : `Summary — ${shortDate(day.date)}`;
+
+  const eaten = sumMeals(day) ?? day.eaten;
+  const burned = day.burned;
+  const net = (eaten != null && burned != null) ? eaten - burned : null;
+  const { w: curW, i: weightIdx } = weightAsOf(idx);
+  const weightProgress = clamp01((START_WEIGHT - curW) / (START_WEIGHT - GOAL_WEIGHT));
+  const toGo = curW - GOAL_WEIGHT;
+
+  const rows = [
+    { label: 'Calories eaten', val: `${eaten != null ? fmt(eaten, 0) : 0} / ${fmt(t.targetEatDaily, 0)} kcal`, pct: clamp01((eaten || 0) / t.targetEatDaily), color: 'var(--pink)' },
+    { label: 'Calories burned', val: `${burned != null ? fmt(burned, 0) : 0} / ${fmt(t.targetBurnDaily, 0)} kcal`, pct: clamp01((burned || 0) / t.targetBurnDaily), color: 'var(--green)' },
+    { label: net != null && net > 0 ? 'Surplus' : 'Deficit', val: net != null ? `${fmtSigned(net, 0)} / ${fmtSigned(-t.dailyDeficitNeeded, 0)} kcal` : `— / ${fmtSigned(-t.dailyDeficitNeeded, 0)} kcal`, pct: net != null ? clamp01(Math.max(0, -net) / t.dailyDeficitNeeded) : 0, color: 'var(--orange)' },
+    { label: 'Weight to goal', val: `${fmt(toGo, 1)} kg left`, pct: weightProgress, color: 'var(--teal)' }
+  ];
+
+  document.getElementById('summaryRows').innerHTML = rows.map(r => `
+    <div class="summary-row">
+      <div class="summary-row-top"><span class="s-label">${r.label}</span><span class="s-val">${r.val}</span></div>
+      <div class="summary-bar-track"><div class="summary-bar-fill" style="width:${(r.pct * 100).toFixed(0)}%;background:${r.color}"></div></div>
+    </div>
+  `).join('');
+
+  renderStreak(idx, latest);
+  renderYesterdayStats(t, idx, latest);
+}
+
+function renderStreak(idx, latest) {
+  const streak = computeStreakAsOf(idx);
+  document.getElementById('streakVal').textContent = streak;
+  const sub = document.getElementById('streakSub');
+  sub.textContent = streak === 0 ? 'Log today to start a streak!' : streak < 3 ? 'Keep it going!' : streak < 7 ? "You're building momentum!" : "You're on fire! 🔥";
+
+  const CIRC = 2 * Math.PI * 34;
+  const pct = clamp01(streak / 21);
+  const ring = document.getElementById('streakRing');
+  ring.style.strokeDasharray = CIRC.toFixed(1);
+  ring.style.strokeDashoffset = (CIRC * (1 - pct)).toFixed(1);
+
+  const N = 14;
+  const start = Math.max(0, idx - N + 1);
+  const last = DATA.slice(start, idx + 1);
+  document.getElementById('streakDots').innerHTML = last.map(r =>
+    `<span class="streak-dot ${sumMeals(r) != null ? 'on' : ''}"></span>`
+  ).join('');
+}
+
+// ---------------------------------------------------------------
+// Render: yesterday's 3 cards — eaten / burned / deficit-surplus
+// ---------------------------------------------------------------
+function statusBadge(state, label) {
+  return `<span class="status-badge ${state}"><span class="dot"></span>${label}</span>`;
+}
+
+function renderYesterdayStats(t, idx, latest) {
+  document.getElementById('yesterdayTitle').textContent = latest ? 'Yesterday' : `Day before ${shortDate(DATA[idx].date)}`;
+  const y = idx > 0 ? DATA[idx - 1] : null;
+  const grid = document.getElementById('yesterdayGrid');
+
+  if (!y) {
+    grid.innerHTML = `<div class="stat-card"><span class="stat-label">No earlier data</span></div>`;
+    return;
   }
 
-  const last30 = weighed.slice(-10); // sparse weigh-ins → show the last 10 logged
-  const labels = last30.map(r => r.date.slice(5));
-  const vals = last30.map(r => r.weight);
+  const eaten = sumMeals(y) ?? y.eaten;
+  const burned = y.burned;
+  const net = (eaten != null && burned != null) ? eaten - burned : null;
 
-  destroyChart('hero');
-  const ctx = document.getElementById('heroSparkChart');
-  charts.hero = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        data: vals, borderColor: '#fff', borderWidth: 2.5,
-        backgroundColor: 'rgba(255,255,255,.18)', fill: true,
-        tension: .35, pointRadius: 0, pointHoverRadius: 4,
-        pointBackgroundColor: '#fff', spanGaps: true
-      }]
+  const cards = [
+    {
+      icon: 'eat', label: 'Calories eaten', value: eaten, target: t.targetEatDaily,
+      badge: eaten == null ? statusBadge('neutral', 'No data logged')
+        : eaten <= t.targetEatDaily ? statusBadge('good', 'Under target')
+        : statusBadge('bad', 'Over target'),
+      barColor: eaten == null ? 'var(--neutral)' : eaten <= t.targetEatDaily ? 'var(--good)' : 'var(--bad)'
     },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.formattedValue} kg` } } },
-      scales: {
-        x: { ticks: { color: 'rgba(255,255,255,.75)', font: { size: 10 } }, grid: { display: false } },
-        y: { display: false }
-      }
+    {
+      icon: 'burn', label: 'Calories burned', value: burned, target: t.targetBurnDaily,
+      badge: burned == null ? statusBadge('neutral', 'No data logged')
+        : burned >= t.targetBurnDaily ? statusBadge('good', 'Met target')
+        : statusBadge('bad', 'Below target'),
+      barColor: burned == null ? 'var(--neutral)' : burned >= t.targetBurnDaily ? 'var(--good)' : 'var(--bad)'
+    },
+    {
+      icon: 'deficit', label: net != null && net > 0 ? 'Surplus' : 'Deficit', value: net, target: -t.dailyDeficitNeeded, signed: true,
+      badge: net == null ? statusBadge('neutral', 'No data logged')
+        : net <= 0 ? statusBadge('good', 'On track')
+        : statusBadge('bad', 'Surplus'),
+      barColor: net == null ? 'var(--neutral)' : net <= 0 ? 'var(--good)' : 'var(--bad)'
     }
-  });
-}
+  ];
 
-// ---------------------------------------------------------------
-// Render: 4 stat cards + mini sparklines
-// ---------------------------------------------------------------
-function miniBarChart(canvasId, values, color) {
-  destroyChart(canvasId);
-  const ctx = document.getElementById(canvasId);
-  charts[canvasId] = new Chart(ctx, {
-    type: 'bar',
-    data: { labels: values.map((_, i) => i), datasets: [{ data: values, backgroundColor: color, borderRadius: 3, maxBarThickness: 10 }] },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { enabled: false } },
-      scales: { x: { display: false }, y: { display: false, beginAtZero: true } }
-    }
-  });
-}
+  const icons = {
+    eat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2v7"/><path d="M8 2v7"/><path d="M11 2v7"/><path d="M8 9v13"/><path d="M17 2c-1.7 0-3 2.2-3 5s1.3 5 3 5 3-2.2 3-5-1.3-5-3-5Z"/><path d="M17 12v10"/></svg>',
+    burn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1.2 3.2-2.7 4.3-2.7 8.2A4.7 4.7 0 0 0 14 15a4 4 0 0 0 4-4c0-1.7-.8-2.6-.8-2.6s0 1.7-1.3 1.9c.9-1.8-.4-4-1.7-4.4.1 1.7-.8 2.6-2.1 3.9C10.9 11 12 6.6 12 2Z"/><path d="M9.3 13.5A3.5 3.5 0 0 0 12.8 17c0 2-1.5 3-3 3s-3.3-1.2-3.3-3.4c0-1.4.7-2.1.7-2.1"/></svg>',
+    deficit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 8.6a5 5 0 0 0-8.8-3.6 5 5 0 0 0-8.8 3.6c0 5 8.8 10 8.8 10s8.8-5 8.8-10z"/><polyline points="6,12 9,12 10.5,9 13,15 14.5,12 18,12"/></svg>'
+  };
 
-function renderStatCards() {
-  const cc = chartColors();
-  const today = DATA[DATA.length - 1];
-  const eatenToday = sumMeals(today);
-  const burnedToday = today.burned;
-  const netToday = (eatenToday != null && burnedToday != null) ? (eatenToday - burnedToday) : null;
-  const weekDeficit = recentAvg('net', 7); // avg eaten-burned, negative = deficit
-
-  document.getElementById('statBurnedVal').textContent = burnedToday != null ? fmt(burnedToday, 0) : '—';
-  document.getElementById('statEatenVal').textContent = eatenToday != null ? fmt(eatenToday, 0) : '—';
-  document.getElementById('statNetVal').textContent = netToday != null ? fmtSigned(netToday, 0) : '—';
-  document.getElementById('statNetSub').textContent = netToday == null ? 'Today' : (netToday <= 0 ? 'Deficit today' : 'Surplus today');
-  document.getElementById('statDeficitVal').textContent = weekDeficit != null ? fmtSigned(weekDeficit, 0) : '—';
-
-  miniBarChart('statBurnedSpark', recentValid('burned', 7, false).map(r => r.burned), cc.burned);
-  miniBarChart('statEatenSpark', recentValid('eaten', 7, false).map(r => r.eaten), cc.eaten);
-  const netSeries = recentValid('net', 7, false).map(r => r.net);
-  miniBarChart('statNetSpark', netSeries, cc.net);
-  miniBarChart('statDeficitSpark', netSeries, netSeries.length && netSeries[netSeries.length - 1] <= 0 ? cc.good : cc.bad);
+  grid.innerHTML = cards.map(c => {
+    const pct = c.value == null ? 0 : clamp01(c.signed ? Math.max(0, -c.value) / Math.abs(c.target) : c.value / c.target);
+    const displayVal = c.signed ? fmtSigned(c.value, 0) : fmt(c.value, 0);
+    const targetLabel = c.signed ? `Target ${fmtSigned(c.target, 0)} kcal` : `Target ${fmt(c.target, 0)} kcal`;
+    return `
+    <div class="stat-card">
+      <div class="stat-icon ${c.icon}">${icons[c.icon]}</div>
+      <span class="stat-label">${c.label}</span>
+      <div class="stat-value"><span>${displayVal}</span><small>kcal</small></div>
+      <span class="stat-target">${targetLabel}</span>
+      <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${(pct * 100).toFixed(0)}%;background:${c.barColor}"></div></div>
+      ${c.badge}
+    </div>`;
+  }).join('');
 }
 
 // ---------------------------------------------------------------
@@ -239,8 +304,9 @@ function renderStatCards() {
 // ---------------------------------------------------------------
 function renderTargets() {
   const t = computeTargets();
-  const today = DATA[DATA.length - 1];
-  const eatenToday = sumMeals(today) ?? 0;
+  const idx = getViewIndex();
+  const day = DATA[idx];
+  const eatenToday = sumMeals(day) ?? 0;
   const weekEaten = recentAvg('eaten', 7) ?? 0;
   const monthEaten = recentAvg('eaten', 30) ?? 0;
   const lostSoFar = START_WEIGHT - t.curW;
@@ -250,7 +316,7 @@ function renderTargets() {
     {
       accent: 'var(--teal)', period: 'Per day', title: 'Daily target',
       rows: [['Eat around', fmt(t.targetEatDaily, 0) + ' kcal'], ['Burn around', fmt(t.targetBurnDaily, 0) + ' kcal'], ['Target deficit', fmt(t.dailyDeficitNeeded, 0) + ' kcal']],
-      pct: clamp01(eatenToday / t.targetEatDaily), foot: `Today: ${fmt(eatenToday, 0)} / ${fmt(t.targetEatDaily, 0)} kcal eaten`
+      pct: clamp01(eatenToday / t.targetEatDaily), foot: `${isLatestView() ? 'Today' : shortDate(day.date)}: ${fmt(eatenToday, 0)} / ${fmt(t.targetEatDaily, 0)} kcal eaten`
     },
     {
       accent: 'var(--pink)', period: 'Per week', title: 'Weekly target',
@@ -281,55 +347,57 @@ function renderTargets() {
 }
 
 // ---------------------------------------------------------------
-// Render: streak card
+// Render: hero weight card + sparkline (as of the viewed date)
 // ---------------------------------------------------------------
-function renderStreak() {
-  const streak = computeStreak();
-  document.getElementById('streakVal').textContent = streak;
-  const sub = document.getElementById('streakSub');
-  sub.textContent = streak === 0 ? 'Log today to start a streak!' : streak < 3 ? 'Keep it going!' : streak < 7 ? "You're building momentum!" : "You're on fire! 🔥";
+function renderHeroWeight() {
+  const idx = getViewIndex();
+  const latest = isLatestView();
+  const { w: curW, i: wIdx } = weightAsOf(idx);
 
-  const CIRC = 2 * Math.PI * 34;
-  const pct = clamp01(streak / 21);
-  const ring = document.getElementById('streakRing');
-  ring.style.strokeDasharray = CIRC.toFixed(1);
-  ring.style.strokeDashoffset = (CIRC * (1 - pct)).toFixed(1);
+  document.getElementById('heroWeightEyebrow').textContent = latest ? 'Current weight' : `Weight as of ${shortDate(DATA[idx].date)}`;
+  document.getElementById('heroWeightVal').textContent = fmt(curW, 1);
 
-  const N = 14;
-  const last = DATA.slice(-N);
-  document.getElementById('streakDots').innerHTML = last.map(r =>
-    `<span class="streak-dot ${sumMeals(r) != null ? 'on' : ''}"></span>`
-  ).join('');
+  const weighedUpTo = DATA.slice(0, idx + 1).filter(r => r.weight != null);
+  const prev = weighedUpTo.length > 1 ? weighedUpTo[weighedUpTo.length - 2].weight : null;
+  const deltaEl = document.getElementById('heroWeightDelta');
+  if (prev != null) {
+    const delta = curW - prev;
+    const arrow = delta <= 0 ? '↓' : '↑';
+    deltaEl.textContent = `${arrow} ${fmt(Math.abs(delta), 1)} kg vs last check-in`;
+  } else {
+    deltaEl.textContent = `Starting weight ${fmt(START_WEIGHT, 1)} kg`;
+  }
+
+  const last10 = weighedUpTo.slice(-10);
+  const labels = last10.map(r => r.date.slice(5));
+  const vals = last10.map(r => r.weight);
+
+  destroyChart('hero');
+  const ctx = document.getElementById('heroSparkChart');
+  charts.hero = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: vals, borderColor: '#fff', borderWidth: 2.5,
+        backgroundColor: 'rgba(255,255,255,.18)', fill: true,
+        tension: .35, pointRadius: 0, pointHoverRadius: 4,
+        pointBackgroundColor: '#fff', spanGaps: true
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.formattedValue} kg` } } },
+      scales: {
+        x: { ticks: { color: 'rgba(255,255,255,.75)', font: { size: 10 } }, grid: { display: false } },
+        y: { display: false }
+      }
+    }
+  });
 }
 
 // ---------------------------------------------------------------
-// Render: today's summary bars
-// ---------------------------------------------------------------
-function renderTodaySummary() {
-  const t = computeTargets();
-  const today = DATA[DATA.length - 1];
-  const eatenToday = sumMeals(today);
-  const burnedToday = today.burned;
-  const netToday = (eatenToday != null && burnedToday != null) ? eatenToday - burnedToday : null;
-  const weightProgress = clamp01((START_WEIGHT - t.curW) / (START_WEIGHT - GOAL_WEIGHT));
-
-  const rows = [
-    { icon: 'flame', label: 'Calories', val: `${eatenToday != null ? fmt(eatenToday, 0) : 0} / ${fmt(t.targetEatDaily, 0)} kcal`, pct: clamp01((eatenToday || 0) / t.targetEatDaily), color: 'var(--pink)' },
-    { icon: 'flame', label: 'Burned', val: `${burnedToday != null ? fmt(burnedToday, 0) : 0} / ${fmt(t.targetBurnDaily, 0)} kcal`, pct: clamp01((burnedToday || 0) / t.targetBurnDaily), color: 'var(--green)' },
-    { icon: 'chart', label: 'Deficit', val: netToday != null ? `${fmtSigned(netToday, 0)} / ${fmtSigned(-t.dailyDeficitNeeded, 0)} kcal` : `— / ${fmtSigned(-t.dailyDeficitNeeded, 0)} kcal`, pct: netToday != null ? clamp01(Math.max(0, -netToday) / t.dailyDeficitNeeded) : 0, color: 'var(--orange)' },
-    { icon: 'heart', label: 'Weight to goal', val: `${fmt(t.toGo, 1)} kg left`, pct: weightProgress, color: 'var(--teal)' }
-  ];
-
-  document.getElementById('summaryRows').innerHTML = rows.map(r => `
-    <div class="summary-row">
-      <div class="summary-row-top"><span class="s-label">${r.label}</span><span class="s-val">${r.val}</span></div>
-      <div class="summary-bar-track"><div class="summary-bar-fill" style="width:${(r.pct * 100).toFixed(0)}%;background:${r.color}"></div></div>
-    </div>
-  `).join('');
-}
-
-// ---------------------------------------------------------------
-// Render: recent log table
+// Render: recent log table (Eaten / Burned only — no Net column)
 // ---------------------------------------------------------------
 let showAllLog = false;
 function noteEmoji(net) {
@@ -344,13 +412,12 @@ function renderRecentLog() {
   const shown = showAllLog ? rows : rows.slice(0, 6);
   document.getElementById('recentLogBody').innerHTML = shown.map(r => {
     const eaten = r.eaten ?? sumMeals(r);
-    const netCls = r.net == null ? '' : (r.net <= 0 ? 'net-good' : 'net-bad');
+    const net = (eaten != null && r.burned != null) ? eaten - r.burned : null;
     return `<tr>
       <td>${r.date.slice(5)}${r.vacay ? ' 🏖' : ''}</td>
       <td>${eaten != null ? fmt(eaten, 0) : '—'}</td>
       <td>${r.burned != null ? fmt(r.burned, 0) : '—'}</td>
-      <td class="${netCls}">${r.net != null ? fmtSigned(r.net, 0) : '—'}</td>
-      <td class="note">${noteEmoji(r.net)}</td>
+      <td class="note">${noteEmoji(net)}</td>
     </tr>`;
   }).join('');
   document.getElementById('viewAllBtn').textContent = showAllLog ? 'Show less' : 'View all';
@@ -387,7 +454,7 @@ function renderWeightTrendChart() {
 }
 
 // ---------------------------------------------------------------
-// Render: calories overview chart (eaten / burned / net)
+// Render: calories overview chart (eaten / burned only — no Net)
 // ---------------------------------------------------------------
 let calRange = 'day';
 function renderCalOverviewChart() {
@@ -401,9 +468,8 @@ function renderCalOverviewChart() {
     data: {
       labels,
       datasets: [
-        { label: 'Eaten', data: agg.map(r => r.eaten), backgroundColor: cc.eaten, borderRadius: 4, maxBarThickness: 22 },
-        { label: 'Burned', data: agg.map(r => r.burned), backgroundColor: cc.burned, borderRadius: 4, maxBarThickness: 22 },
-        { label: 'Net', data: agg.map(r => r.net), backgroundColor: cc.net, borderRadius: 4, maxBarThickness: 22 }
+        { label: 'Eaten', data: agg.map(r => r.eaten), backgroundColor: cc.eaten, borderRadius: 4, maxBarThickness: 26 },
+        { label: 'Burned', data: agg.map(r => r.burned), backgroundColor: cc.burned, borderRadius: 4, maxBarThickness: 26 }
       ]
     },
     options: {
@@ -423,11 +489,9 @@ function renderCalOverviewChart() {
 function renderAll() {
   DATA.sort((a, b) => a.date < b.date ? -1 : 1);
   renderGreeting();
+  renderSnapshot();
   renderHeroWeight();
-  renderStatCards();
   renderTargets();
-  renderStreak();
-  renderTodaySummary();
   renderRecentLog();
   renderWeightTrendChart();
   renderCalOverviewChart();
@@ -443,7 +507,9 @@ function switchView(view) {
     if (el.classList.contains('is-disabled')) return;
     el.classList.toggle('active', el.dataset.nav === view);
   });
-  window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+  if (typeof window.scrollTo === 'function') {
+    try { window.scrollTo({ top: 0 }); } catch (e) { window.scrollTo(0, 0); }
+  }
 }
 
 function wireNav() {
@@ -511,6 +577,9 @@ function wireLogForm() {
 
     e.target.reset();
     document.getElementById('logTotalVal').textContent = '0 kcal';
+    viewDate = DATA[DATA.length - 1].date;
+    const dateInput = document.getElementById('dateInput');
+    if (dateInput) { dateInput.max = viewDate; dateInput.value = viewDate; }
     renderAll();
     showToast();
     setTimeout(() => switchView('dashboard'), 650);
@@ -523,13 +592,14 @@ function wireLogForm() {
 document.addEventListener('DOMContentLoaded', () => {
   wireNav();
   wireLogForm();
+  initDatePicker();
   wireToggle('weightRangeToggle', r => { weightRange = r; renderWeightTrendChart(); });
   wireToggle('calRangeToggle', r => { calRange = r; renderCalOverviewChart(); });
   document.getElementById('viewAllBtn').addEventListener('click', () => { showAllLog = !showAllLog; renderRecentLog(); });
 
   if (window.matchMedia) {
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-      renderStatCards(); renderWeightTrendChart(); renderCalOverviewChart();
+      renderWeightTrendChart(); renderCalOverviewChart();
     });
   }
 

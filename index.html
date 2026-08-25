@@ -88,138 +88,100 @@
         <button class="icon-btn mobile-only" aria-label="Notifications">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
         </button>
-        <div class="date-chip" id="dateChip">
+        <label class="date-picker" id="datePickerWrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
-          <span id="dateChipLabel">—</span>
-        </div>
+          <input type="date" id="dateInput" aria-label="Viewing date">
+        </label>
       </div>
     </header>
 
-    <div class="dashboard-grid">
-      <!-- ===== MAIN COLUMN ===== -->
-      <div class="main-col">
-
-        <section class="hero-weight">
-          <div class="hero-weight-head">
-            <span class="eyebrow">Current weight</span>
-            <div class="select-fake" id="weightRangeLabel">Last 30 days</div>
-          </div>
-          <div class="hero-weight-num"><span id="heroWeightVal">—</span><span class="unit">kg</span></div>
-          <p class="hero-weight-delta" id="heroWeightDelta">—</p>
-          <div class="hero-weight-chart"><canvas id="heroSparkChart"></canvas></div>
-        </section>
-
-        <section class="stat-grid">
-          <div class="stat-card">
-            <div class="stat-icon burn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1.2 3.2-2.7 4.3-2.7 8.2A4.7 4.7 0 0 0 14 15a4 4 0 0 0 4-4c0-1.7-.8-2.6-.8-2.6s0 1.7-1.3 1.9c.9-1.8-.4-4-1.7-4.4.1 1.7-.8 2.6-2.1 3.9C10.9 11 12 6.6 12 2Z"/><path d="M9.3 13.5A3.5 3.5 0 0 0 12.8 17c0 2-1.5 3-3 3s-3.3-1.2-3.3-3.4c0-1.4.7-2.1.7-2.1"/></svg>
-            </div>
-            <span class="stat-label">Calories burned</span>
-            <div class="stat-value"><span id="statBurnedVal">—</span><small>kcal</small></div>
-            <span class="stat-sub">Today</span>
-            <div class="stat-spark"><canvas id="statBurnedSpark"></canvas></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon eat">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2v7"/><path d="M8 2v7"/><path d="M11 2v7"/><path d="M8 9v13"/><path d="M17 2c-1.7 0-3 2.2-3 5s1.3 5 3 5 3-2.2 3-5-1.3-5-3-5Z"/><path d="M17 12v10"/></svg>
-            </div>
-            <span class="stat-label">Calories eaten</span>
-            <div class="stat-value"><span id="statEatenVal">—</span><small>kcal</small></div>
-            <span class="stat-sub">Today</span>
-            <div class="stat-spark"><canvas id="statEatenSpark"></canvas></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon net">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="3" height="6" rx="1"/><rect x="19" y="9" width="3" height="6" rx="1"/><rect x="6" y="7" width="2" height="10" rx="1"/><rect x="16" y="7" width="2" height="10" rx="1"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-            </div>
-            <span class="stat-label">Net calories</span>
-            <div class="stat-value"><span id="statNetVal">—</span><small>kcal</small></div>
-            <span class="stat-sub" id="statNetSub">Deficit</span>
-            <div class="stat-spark"><canvas id="statNetSpark"></canvas></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon deficit">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 8.6a5 5 0 0 0-8.8-3.6 5 5 0 0 0-8.8 3.6c0 5 8.8 10 8.8 10s8.8-5 8.8-10z"/><polyline points="6,12 9,12 10.5,9 13,15 14.5,12 18,12"/></svg>
-            </div>
-            <span class="stat-label">Avg. daily deficit</span>
-            <div class="stat-value"><span id="statDeficitVal">—</span><small>kcal</small></div>
-            <span class="stat-sub">This week</span>
-            <div class="stat-spark"><canvas id="statDeficitSpark"></canvas></div>
-          </div>
-        </section>
-
-        <section class="section-block">
-          <div class="section-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg>
-            <h2>My Targets</h2>
-          </div>
-          <div class="targets-grid" id="targetsGrid"><!-- filled by JS --></div>
-        </section>
-
-        <section class="chart-card">
-          <div class="chart-card-head">
-            <h3>Weight trend</h3>
-            <div class="toggle-row" id="weightRangeToggle">
-              <button data-range="day" class="active">Day</button>
-              <button data-range="week">Week</button>
-              <button data-range="month">Month</button>
-            </div>
-          </div>
-          <div class="chart-wrap"><canvas id="weightTrendChart"></canvas></div>
-        </section>
-
-        <section class="chart-card">
-          <div class="chart-card-head">
-            <h3>Calories overview</h3>
-            <div class="toggle-row" id="calRangeToggle">
-              <button data-range="day" class="active">Day</button>
-              <button data-range="week">Week</button>
-              <button data-range="month">Month</button>
-            </div>
-          </div>
-          <div class="chart-wrap"><canvas id="calOverviewChart"></canvas></div>
-        </section>
-
+    <!-- ===== SNAPSHOT (as of the selected date) ===== -->
+    <section class="snapshot-row">
+      <div class="today-summary">
+        <div class="today-summary-head">
+          <h3 id="summaryTitle">Today's summary</h3>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/></svg>
+        </div>
+        <div class="summary-rows" id="summaryRows"><!-- filled by JS --></div>
       </div>
 
-      <!-- ===== SIDE COLUMN ===== -->
-      <div class="side-col">
-
-        <section class="streak-card">
-          <div class="streak-ring">
-            <svg viewBox="0 0 80 80"><circle class="ring-bg" cx="40" cy="40" r="34"/><circle class="ring-fg" id="streakRing" cx="40" cy="40" r="34"/></svg>
-            <svg class="streak-flame" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1.2 3.2-2.7 4.3-2.7 8.2A4.7 4.7 0 0 0 14 15a4 4 0 0 0 4-4c0-1.7-.8-2.6-.8-2.6s0 1.7-1.3 1.9c.9-1.8-.4-4-1.7-4.4.1 1.7-.8 2.6-2.1 3.9C10.9 11 12 6.6 12 2Z"/><path d="M9.3 13.5A3.5 3.5 0 0 0 12.8 17c0 2-1.5 3-3 3s-3.3-1.2-3.3-3.4c0-1.4.7-2.1.7-2.1"/></svg>
-          </div>
-          <div class="streak-text">
-            <div class="streak-num"><span id="streakVal">—</span> Day Streak</div>
-            <p id="streakSub">Keep it going!</p>
-          </div>
-          <div class="streak-dots" id="streakDots"><!-- filled by JS --></div>
-        </section>
-
-        <section class="today-summary">
-          <div class="today-summary-head">
-            <h3>Today's summary</h3>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/></svg>
-          </div>
-          <div class="summary-rows" id="summaryRows"><!-- filled by JS --></div>
-        </section>
-
-        <section class="recent-log-card">
-          <div class="recent-log-head">
-            <h3>Recent log</h3>
-            <button id="viewAllBtn" class="link-btn">View all</button>
-          </div>
-          <div class="recent-log-table-wrap">
-            <table class="recent-log-table">
-              <thead><tr><th>Date</th><th>In</th><th>Out</th><th>Net</th><th></th></tr></thead>
-              <tbody id="recentLogBody"></tbody>
-            </table>
-          </div>
-        </section>
-
+      <div class="streak-card">
+        <div class="streak-ring">
+          <svg viewBox="0 0 80 80"><circle class="ring-bg" cx="40" cy="40" r="34"/><circle class="ring-fg" id="streakRing" cx="40" cy="40" r="34"/></svg>
+          <svg class="streak-flame" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1.2 3.2-2.7 4.3-2.7 8.2A4.7 4.7 0 0 0 14 15a4 4 0 0 0 4-4c0-1.7-.8-2.6-.8-2.6s0 1.7-1.3 1.9c.9-1.8-.4-4-1.7-4.4.1 1.7-.8 2.6-2.1 3.9C10.9 11 12 6.6 12 2Z"/><path d="M9.3 13.5A3.5 3.5 0 0 0 12.8 17c0 2-1.5 3-3 3s-3.3-1.2-3.3-3.4c0-1.4.7-2.1.7-2.1"/></svg>
+        </div>
+        <div class="streak-text">
+          <div class="streak-num"><span id="streakVal">—</span> Day Streak</div>
+          <p id="streakSub">Keep it going!</p>
+        </div>
+        <div class="streak-dots" id="streakDots"><!-- filled by JS --></div>
       </div>
-    </div>
+    </section>
+
+    <!-- ===== YESTERDAY: eaten / burned / deficit ===== -->
+    <section class="section-block">
+      <div class="section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>
+        <h2 id="yesterdayTitle">Yesterday</h2>
+      </div>
+      <div class="stat-grid" id="yesterdayGrid"><!-- filled by JS --></div>
+    </section>
+
+    <!-- ===== WEIGHT ===== -->
+    <section class="hero-weight">
+      <div class="hero-weight-head">
+        <span class="eyebrow" id="heroWeightEyebrow">Current weight</span>
+        <div class="select-fake" id="weightRangeLabel">Last 10 weigh-ins</div>
+      </div>
+      <div class="hero-weight-num"><span id="heroWeightVal">—</span><span class="unit">kg</span></div>
+      <p class="hero-weight-delta" id="heroWeightDelta">—</p>
+      <div class="hero-weight-chart"><canvas id="heroSparkChart"></canvas></div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg>
+        <h2>My Targets</h2>
+      </div>
+      <div class="targets-grid" id="targetsGrid"><!-- filled by JS --></div>
+    </section>
+
+    <section class="chart-card">
+      <div class="chart-card-head">
+        <h3>Weight trend</h3>
+        <div class="toggle-row" id="weightRangeToggle">
+          <button data-range="day" class="active">Day</button>
+          <button data-range="week">Week</button>
+          <button data-range="month">Month</button>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="weightTrendChart"></canvas></div>
+    </section>
+
+    <section class="chart-card">
+      <div class="chart-card-head">
+        <h3>Calories overview</h3>
+        <div class="toggle-row" id="calRangeToggle">
+          <button data-range="day" class="active">Day</button>
+          <button data-range="week">Week</button>
+          <button data-range="month">Month</button>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="calOverviewChart"></canvas></div>
+    </section>
+
+    <section class="recent-log-card">
+      <div class="recent-log-head">
+        <h3>Recent log</h3>
+        <button id="viewAllBtn" class="link-btn">View all</button>
+      </div>
+      <div class="recent-log-table-wrap">
+        <table class="recent-log-table">
+          <thead><tr><th>Date</th><th>Eaten</th><th>Burned</th><th></th></tr></thead>
+          <tbody id="recentLogBody"></tbody>
+        </table>
+      </div>
+    </section>
 
     <div class="quote-banner">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7c-2.2 0-4 1.8-4 4v6h6v-6H6.2C6.6 9.5 8 8 10 8V7H7Zm10 0c-2.2 0-4 1.8-4 4v6h6v-6h-2.8c.4-1.5 1.8-3 3.8-3V7h-3Z"/></svg>
@@ -300,17 +262,6 @@
   <button class="tab-item" data-view="log" data-nav="log">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2v7"/><path d="M8 2v7"/><path d="M11 2v7"/><path d="M8 9v13"/><path d="M17 2c-1.7 0-3 2.2-3 5s1.3 5 3 5 3-2.2 3-5-1.3-5-3-5Z"/><path d="M17 12v10"/></svg>
     <span>Log</span>
-  </button>
-  <button class="tab-item tab-fab" data-view="log" data-nav="log" aria-label="Log a meal">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-  </button>
-  <button class="tab-item is-disabled" data-nav="progress" tabindex="-1">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>
-    <span>Progress</span>
-  </button>
-  <button class="tab-item is-disabled" data-nav="profile" tabindex="-1">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
-    <span>Profile</span>
   </button>
 </nav>
 
