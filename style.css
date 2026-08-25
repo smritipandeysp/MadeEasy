@@ -375,9 +375,11 @@ button {
 .target-row:last-child { border-bottom: none; }
 .target-row span:first-child { color: var(--ink-soft); }
 .target-row span:last-child { font-weight: 600; text-align: right; }
-.target-bar-track { height: 6px; border-radius: 100px; background: var(--border-soft); margin-top: 10px; overflow: hidden; }
+.target-bar-row { margin-top: 10px; }
+.target-bar-label { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--ink-faint); margin-bottom: 4px; }
+.target-bar-track { height: 6px; border-radius: 100px; background: var(--border-soft); overflow: hidden; }
 .target-bar-fill { height: 100%; border-radius: 100px; background: var(--accent, var(--teal)); }
-.target-foot { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--ink-faint); margin-top: 6px; }
+.target-foot { font-size: 11px; color: var(--ink-faint); margin-top: 8px; }
 
 /* ===================== CHART CARDS ===================== */
 
@@ -438,17 +440,18 @@ button {
 
 #view-log { max-width: 560px; }
 
-.log-header {
-  display: flex; align-items: center; justify-content: space-between;
-  background: linear-gradient(120deg, var(--pink), var(--orange));
-  border-radius: var(--radius-lg);
-  padding: 16px 18px;
-  color: #fff;
+.log-plain-header {
+  display: flex; align-items: center; gap: 12px;
 }
-.log-header h2 { margin: 0; font-size: 17px; font-weight: 700; }
-.log-header .icon-btn { background: rgba(255,255,255,.2); border-color: transparent; color: #fff; }
+.log-plain-header h2 { margin: 0; font-size: 19px; font-weight: 700; }
 
 .log-form { display: flex; flex-direction: column; gap: 20px; }
+
+.log-section-title {
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--ink-faint); margin: 4px 0 -6px;
+}
+.log-section-hint { font-weight: 500; text-transform: none; letter-spacing: 0; }
 
 .log-field label { display: block; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-faint); margin-bottom: 7px; }
 .log-field input[type="date"] {
@@ -467,6 +470,19 @@ button {
 .meal-icon.meal-lunch { background: var(--orange-soft); color: var(--orange); }
 .meal-icon.meal-dinner { background: var(--purple-soft); color: var(--purple); }
 .meal-icon.meal-snacks { background: var(--green-soft); color: var(--green); }
+.meal-icon.meal-burn { background: var(--green-soft); color: var(--green); }
+.meal-icon.meal-exercise { background: var(--blue-soft); color: var(--blue); }
+
+/* ---- day status toggles ---- */
+.status-toggle-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.status-toggle {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md);
+  padding: 14px; box-shadow: var(--shadow-card); color: var(--ink-soft); font-family: inherit;
+  font-size: 13px; font-weight: 600;
+}
+.status-toggle svg { width: 20px; height: 20px; }
+.status-toggle.active { background: var(--pink-soft); border-color: var(--pink); color: var(--pink-strong); }
 .meal-input label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
 .meal-input-row { display: flex; align-items: baseline; gap: 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
 .meal-input-row input {

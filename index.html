@@ -192,14 +192,11 @@
 
   <!-- ---------- LOG MEAL VIEW ---------- -->
   <main class="view" id="view-log" data-view="log" hidden>
-    <div class="log-header">
+    <div class="log-plain-header">
       <button class="icon-btn" id="logBackBtn" aria-label="Back to dashboard">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <h2>Log Meal</h2>
-      <button class="icon-btn" id="logSaveBtn" aria-label="Save entry">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      </button>
     </div>
 
     <form class="log-form" id="logForm">
@@ -244,8 +241,38 @@
         <strong id="logTotalVal">0 kcal</strong>
       </div>
 
+      <div class="log-section-title">Calories burned</div>
+      <div class="meal-inputs">
+        <div class="meal-input">
+          <div class="meal-icon meal-burn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1.2 3.2-2.7 4.3-2.7 8.2A4.7 4.7 0 0 0 14 15a4 4 0 0 0 4-4c0-1.7-.8-2.6-.8-2.6s0 1.7-1.3 1.9c.9-1.8-.4-4-1.7-4.4.1 1.7-.8 2.6-2.1 3.9C10.9 11 12 6.6 12 2Z"/><path d="M9.3 13.5A3.5 3.5 0 0 0 12.8 17c0 2-1.5 3-3 3s-3.3-1.2-3.3-3.4c0-1.4.7-2.1.7-2.1"/></svg>
+          </div>
+          <label for="f_burn">Total burned</label>
+          <div class="meal-input-row"><input type="number" min="0" id="f_burn" placeholder="0"><small>kcal</small></div>
+        </div>
+        <div class="meal-input">
+          <div class="meal-icon meal-exercise">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="3" height="6" rx="1"/><rect x="19" y="9" width="3" height="6" rx="1"/><rect x="6" y="7" width="2" height="10" rx="1"/><rect x="16" y="7" width="2" height="10" rx="1"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          </div>
+          <label for="f_exercise">Exercise</label>
+          <div class="meal-input-row"><input type="number" min="0" id="f_exercise" placeholder="0"><small>kcal</small></div>
+        </div>
+      </div>
+
+      <div class="log-section-title">Day status <span class="log-section-hint">(optional)</span></div>
+      <div class="status-toggle-row">
+        <button type="button" class="status-toggle" id="toggleVacay" data-field="vacay" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v2"/><path d="M3 14a9 9 0 0 1 18 0z"/><path d="M12 14v7"/><path d="M9 21c0-1.2 1.3-2 3-2s3 .8 3 2"/></svg>
+          <span>Vacation day</span>
+        </button>
+        <button type="button" class="status-toggle" id="togglePeriod" data-field="period" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5c3.5 4.5 6.5 8.3 6.5 11.8a6.5 6.5 0 0 1-13 0c0-3.5 3-7.3 6.5-11.8Z"/></svg>
+          <span>Period day</span>
+        </button>
+      </div>
+
       <button type="submit" class="btn-primary log-submit">Save entry &amp; update dashboard</button>
-      <p class="log-note">This updates your dashboard right away. Burn and weight are logged separately once Log Workout is live.</p>
+      <p class="log-note">This updates your dashboard right away. Weight is logged separately once Log Workout is live.</p>
     </form>
 
     <div class="log-toast" id="logToast">Saved! Dashboard updated.</div>

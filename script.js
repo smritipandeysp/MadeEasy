@@ -312,26 +312,37 @@ function renderTargets() {
   const lostSoFar = START_WEIGHT - t.curW;
   const totalToLose = START_WEIGHT - GOAL_WEIGHT;
 
+  const burnedToday = day.burned ?? 0;
+  const weekBurned = recentAvg('burned', 7) ?? 0;
+  const monthBurned = recentAvg('burned', 30) ?? 0;
+
+  const eatBar = (val) => ({ label: 'Eat', pct: clamp01(val / t.targetEatDaily), color: 'var(--pink)' });
+  const burnBar = (val) => ({ label: 'Burn', pct: clamp01(val / t.targetBurnDaily), color: 'var(--green)' });
+
   const cards = [
     {
       accent: 'var(--teal)', period: 'Per day', title: 'Daily target',
       rows: [['Eat around', fmt(t.targetEatDaily, 0) + ' kcal'], ['Burn around', fmt(t.targetBurnDaily, 0) + ' kcal'], ['Target deficit', fmt(t.dailyDeficitNeeded, 0) + ' kcal']],
-      pct: clamp01(eatenToday / t.targetEatDaily), foot: `${isLatestView() ? 'Today' : shortDate(day.date)}: ${fmt(eatenToday, 0)} / ${fmt(t.targetEatDaily, 0)} kcal eaten`
+      bars: [eatBar(eatenToday), burnBar(burnedToday)],
+      foot: `${isLatestView() ? 'Today' : shortDate(day.date)}: ${fmt(eatenToday, 0)} eaten · ${fmt(burnedToday, 0)} burned`
     },
     {
       accent: 'var(--pink)', period: 'Per week', title: 'Weekly target',
       rows: [['Eat around', fmt(t.targetEatDaily * 7, 0) + ' kcal'], ['Burn around', fmt(t.targetBurnDaily * 7, 0) + ' kcal'], ['Weight loss', SAFE_KG_PER_WEEK.toFixed(1) + ' kg']],
-      pct: clamp01(weekEaten / t.targetEatDaily), foot: `This week avg: ${fmt(weekEaten, 0)} / ${fmt(t.targetEatDaily, 0)} kcal/day`
+      bars: [eatBar(weekEaten), burnBar(weekBurned)],
+      foot: `This week avg: ${fmt(weekEaten, 0)} eaten · ${fmt(weekBurned, 0)} burned /day`
     },
     {
       accent: 'var(--orange)', period: 'Per month (≈30d)', title: 'Monthly target',
       rows: [['Eat around', fmt(t.targetEatDaily * 30, 0) + ' kcal'], ['Burn around', fmt(t.targetBurnDaily * 30, 0) + ' kcal'], ['Weight loss', fmt(SAFE_KG_PER_WEEK * 30 / 7, 1) + ' kg']],
-      pct: clamp01(monthEaten / t.targetEatDaily), foot: `This month avg: ${fmt(monthEaten, 0)} / ${fmt(t.targetEatDaily, 0)} kcal/day`
+      bars: [eatBar(monthEaten), burnBar(monthBurned)],
+      foot: `This month avg: ${fmt(monthEaten, 0)} eaten · ${fmt(monthBurned, 0)} burned /day`
     },
     {
       accent: 'var(--green)', period: 'At this pace', title: 'To goal',
       rows: [['Weeks to goal', fmt(t.weeksAtSafePace, 1)], ['Current BMI', fmt(t.curW / ((HEIGHT_CM / 100) ** 2), 1)], ['Goal BMI', fmt(GOAL_WEIGHT / ((HEIGHT_CM / 100) ** 2), 1)]],
-      pct: clamp01(lostSoFar / totalToLose), foot: `${fmt(t.toGo, 1)} kg to go`
+      bars: [{ label: 'To goal', pct: clamp01(lostSoFar / totalToLose), color: 'var(--teal)' }],
+      foot: `${fmt(t.toGo, 1)} kg to go`
     }
   ];
 
@@ -340,8 +351,12 @@ function renderTargets() {
       <div class="t-period">${c.period}</div>
       <div class="t-title">${c.title}</div>
       ${c.rows.map(r => `<div class="target-row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('')}
-      <div class="target-bar-track"><div class="target-bar-fill" style="width:${(c.pct * 100).toFixed(0)}%"></div></div>
-      <div class="target-foot"><span>${c.foot}</span><span>${(c.pct * 100).toFixed(0)}%</span></div>
+      ${c.bars.map(b => `
+        <div class="target-bar-row">
+          <div class="target-bar-label"><span>${b.label}</span><span>${(b.pct * 100).toFixed(0)}%</span></div>
+          <div class="target-bar-track"><div class="target-bar-fill" style="width:${(b.pct * 100).toFixed(0)}%;background:${b.color}"></div></div>
+        </div>`).join('')}
+      <div class="target-foot">${c.foot}</div>
     </div>
   `).join('');
 }
@@ -514,10 +529,12 @@ function switchView(view) {
 
 function wireNav() {
   document.querySelectorAll('[data-nav]:not(.is-disabled)').forEach(el => {
-    el.addEventListener('click', () => switchView(el.dataset.view));
+    el.addEventListener('click', () => {
+      if (el.dataset.view === 'log') resetLogForm();
+      switchView(el.dataset.view);
+    });
   });
   document.getElementById('logBackBtn').addEventListener('click', () => switchView('dashboard'));
-  document.getElementById('logSaveBtn').addEventListener('click', () => document.getElementById('logForm').requestSubmit());
 }
 
 // ---------------------------------------------------------------
@@ -554,8 +571,38 @@ function showToast() {
   setTimeout(() => toast.classList.remove('show'), 1800);
 }
 
+// ---- day-status toggles (vacation / period) — optional, default "no" ----
+let logVacay = false;
+let logPeriod = false;
+
+function updateStatusToggleUI() {
+  const vBtn = document.getElementById('toggleVacay');
+  const pBtn = document.getElementById('togglePeriod');
+  vBtn.classList.toggle('active', logVacay);
+  vBtn.setAttribute('aria-pressed', String(logVacay));
+  pBtn.classList.toggle('active', logPeriod);
+  pBtn.setAttribute('aria-pressed', String(logPeriod));
+}
+
+function wireStatusToggles() {
+  document.getElementById('toggleVacay').addEventListener('click', () => { logVacay = !logVacay; updateStatusToggleUI(); });
+  document.getElementById('togglePeriod').addEventListener('click', () => { logPeriod = !logPeriod; updateStatusToggleUI(); });
+}
+
+function resetLogForm() {
+  const form = document.getElementById('logForm');
+  form.reset();
+  document.getElementById('logTotalVal').textContent = '0 kcal';
+  logVacay = false;
+  logPeriod = false;
+  updateStatusToggleUI();
+  document.getElementById('f_date').value = '';
+  updateLogDefaultDate();
+}
+
 function wireLogForm() {
   ['f_b', 'f_l', 'f_d', 'f_s'].forEach(id => document.getElementById(id).addEventListener('input', updateLogTotal));
+  wireStatusToggles();
 
   document.getElementById('logForm').addEventListener('submit', e => {
     e.preventDefault();
@@ -567,16 +614,28 @@ function wireLogForm() {
     const s = parseFloat(document.getElementById('f_s').value) || 0;
     const eaten = b + l + d + s;
 
+    const burnVal = document.getElementById('f_burn').value;
+    const exerciseVal = document.getElementById('f_exercise').value;
+    const burn = burnVal !== '' ? parseFloat(burnVal) : null;
+    const exercise = exerciseVal !== '' ? parseFloat(exerciseVal) : null;
+    const vacay = logVacay;
+    const period = logPeriod;
+
     const idx = DATA.findIndex(r => r.date === date);
     if (idx >= 0) {
+      const finalBurn = burn != null ? burn : DATA[idx].burned;
       DATA[idx] = { ...DATA[idx], breakfast: b, lunch: l, dinner: d, snacks: s, eaten,
-        net: DATA[idx].burned != null ? eaten - DATA[idx].burned : null };
+        burned: finalBurn,
+        exerciseBurn: exercise != null ? exercise : DATA[idx].exerciseBurn,
+        net: finalBurn != null ? eaten - finalBurn : null,
+        vacay, period };
     } else {
-      DATA.push({ date, breakfast: b, lunch: l, dinner: d, snacks: s, eaten, exerciseBurn: null, burned: null, net: null, weight: null, vacay: false });
+      DATA.push({ date, breakfast: b, lunch: l, dinner: d, snacks: s, eaten,
+        exerciseBurn: exercise, burned: burn, net: burn != null ? eaten - burn : null,
+        weight: null, vacay, period });
     }
 
-    e.target.reset();
-    document.getElementById('logTotalVal').textContent = '0 kcal';
+    resetLogForm();
     viewDate = DATA[DATA.length - 1].date;
     const dateInput = document.getElementById('dateInput');
     if (dateInput) { dateInput.max = viewDate; dateInput.value = viewDate; }
