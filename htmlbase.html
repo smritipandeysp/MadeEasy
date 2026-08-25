@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weight Journal — Riti</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#FAF6EE;
+    --paper:#FFFFFF;
+    --ink:#232030;
+    --ink-soft:#6B6478;
+    --ink-faint:#A79FB0;
+    --hairline:#E4DDCB;
+    --sage:#6E8F76;
+    --sage-soft:#E4ECE3;
+    --rose:#C4735F;
+    --rose-soft:#F5E3DC;
+    --plum:#8B5A83;
+    --plum-soft:#F0E4EE;
+    --gold:#C99A3E;
+    --gold-soft:#F7EBD3;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:32px 24px 80px;}
+
+  header.masthead{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:18px;margin-bottom:28px;flex-wrap:wrap;gap:12px;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--ink-soft);margin:0 0 6px;
+  }
+  h1.title{
+    font-family:'Fraunces',serif;font-weight:600;font-size:clamp(28px,4vw,42px);
+    margin:0;line-height:1.05;letter-spacing:-.01em;
+  }
+  .masthead-right{text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);}
+  .masthead-right b{color:var(--ink);}
+
+  .hero{
+    display:grid;grid-template-columns:1.3fr 1fr;gap:20px;margin-bottom:36px;
+  }
+  @media (max-width:820px){ .hero{grid-template-columns:1fr;} }
+
+  .hero-card{
+    background:var(--paper);border-radius:var(--radius);
+    border:1px solid var(--hairline);
+    padding:26px 28px;position:relative;overflow:hidden;
+  }
+  .hero-main{display:flex;flex-direction:column;justify-content:space-between;min-height:260px;}
+  .hero-label{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-soft);}
+  .hero-number{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(48px,7vw,76px);line-height:1;margin:6px 0 2px;color:var(--plum);}
+  .hero-sub{color:var(--ink-soft);font-size:14.5px;max-width:46ch;}
+  #sparkline{position:absolute;right:0;bottom:0;opacity:.9;}
+
+  .stat-stack{display:flex;flex-direction:column;gap:20px;}
+  .stat-card{
+    background:var(--paper);border-radius:var(--radius);border:1px solid var(--hairline);
+    padding:18px 22px;flex:1;display:flex;flex-direction:column;justify-content:center;
+  }
+  .stat-card .hero-number{font-size:clamp(30px,4vw,38px);color:var(--ink);}
+  .stat-card.good .hero-number{color:var(--sage);}
+  .stat-card.warn .hero-number{color:var(--rose);}
+
+  .section-head{display:flex;align-items:baseline;gap:12px;margin:44px 0 16px;}
+  .section-head h2{
+    font-family:'Fraunces',serif;font-weight:600;font-size:22px;margin:0;
+    position:relative;
+  }
+  .section-head .squiggle{flex:1;height:8px;opacity:.55;}
+  .section-note{color:var(--ink-soft);font-size:13.5px;margin:-8px 0 18px;max-width:70ch;}
+
+  .targets-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;}
+  .target-card{
+    background:var(--paper);border:1px solid var(--hairline);border-radius:var(--radius);
+    padding:18px 20px;
+  }
+  .target-card h3{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-soft);margin:0 0 10px;font-weight:600;}
+  .target-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px dashed var(--hairline);}
+  .target-row:last-child{border-bottom:none;}
+  .target-row span:first-child{color:var(--ink-soft);font-size:13.5px;}
+  .target-row span:last-child{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:14.5px;}
+  .gap-line{
+    margin-top:10px;padding-top:10px;border-top:1px solid var(--hairline);
+    font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;
+  }
+  .gap-line.good{color:var(--sage);}
+  .gap-line.bad{color:var(--rose);}
+  .today-card{border-color:var(--gold);background:var(--gold-soft);}
+  .today-card h3{color:#8A6A1F;}
+  .gap-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none;}
+
+  .toggle-row{display:flex;gap:8px;align-items:center;margin-bottom:18px;}
+  .toggle-row button{
+    font-family:'Inter',sans-serif;font-size:13px;font-weight:600;
+    background:var(--paper);border:1px solid var(--hairline);color:var(--ink-soft);
+    padding:7px 16px;border-radius:100px;cursor:pointer;transition:.15s;
+  }
+  .toggle-row button.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+
+  .chart-card{
+    background:var(--paper);border:1px solid var(--hairline);border-radius:var(--radius);
+    padding:22px;margin-bottom:20px;
+  }
+  .chart-card h3{margin:0 0 14px;font-family:'Fraunces',serif;font-weight:600;font-size:16px;}
+  .chart-wrap{height:300px;position:relative;}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  @media (max-width:820px){ .two-col{grid-template-columns:1fr;} }
+
+  .table-scroll{max-height:420px;overflow:auto;border:1px solid var(--hairline);border-radius:var(--radius);}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{
+    position:sticky;top:0;background:var(--ink);color:var(--paper);
+    font-family:'IBM Plex Mono',monospace;font-weight:500;text-transform:uppercase;letter-spacing:.06em;
+    font-size:10.5px;padding:10px 10px;text-align:right;white-space:nowrap;
+  }
+  thead th:first-child{text-align:left;}
+  tbody td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--hairline);font-family:'IBM Plex Mono',monospace;white-space:nowrap;}
+  tbody td:first-child{text-align:left;font-family:'Inter',sans-serif;font-weight:600;}
+  tbody tr:hover{background:var(--sage-soft);}
+  tbody tr.vacay{background:var(--gold-soft);}
+  .net-pos{color:var(--sage);}
+  .net-neg{color:var(--rose);}
+
+  .entry-form{
+    background:var(--paper);border:1px solid var(--hairline);border-radius:var(--radius);
+    padding:22px;display:grid;grid-template-columns:repeat(6,1fr);gap:14px;align-items:end;
+  }
+  @media (max-width:820px){ .entry-form{grid-template-columns:repeat(2,1fr);} }
+  .field label{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);margin-bottom:6px;}
+  .field input{
+    width:100%;padding:9px 10px;border:1px solid var(--hairline);border-radius:8px;
+    font-family:'IBM Plex Mono',monospace;font-size:14px;background:#FCFAF5;
+  }
+  .field input:focus{outline:2px solid var(--plum);outline-offset:1px;}
+  .entry-form button{
+    grid-column:1 / -1;background:var(--ink);color:var(--paper);border:none;border-radius:100px;
+    padding:12px 20px;font-family:'Inter',sans-serif;font-weight:600;font-size:14px;cursor:pointer;
+  }
+  .entry-form button:hover{background:var(--plum);}
+  .form-note{font-size:12px;color:var(--ink-faint);margin-top:10px;}
+
+  footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--hairline);color:var(--ink-faint);font-size:12px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div>
+      <p class="eyebrow">Personal weight journal · started 8 Jun 2026</p>
+      <h1 class="title">Weight Loss Dashboard</h1>
+    </div>
+    <div class="masthead-right">
+      Height <b>157 cm</b> · Goal <b>62.0 kg</b><br>
+      <span id="lastUpdated"></span>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-card hero-main">
+      <svg id="sparkline" width="380" height="180" viewBox="0 0 380 180"></svg>
+      <div>
+        <div class="hero-label">Weight still to lose</div>
+        <div class="hero-number" id="heroToGo">—</div>
+        <div class="hero-sub" id="heroSub">From your latest logged weight down to your 62.0 kg goal.</div>
+      </div>
+    </div>
+    <div class="stat-stack">
+      <div class="stat-card">
+        <div class="hero-label">Latest weight</div>
+        <div class="hero-number" id="statCurrent">—</div>
+      </div>
+      <div class="stat-card" id="statDaysCard">
+        <div class="hero-label">Days to goal, at your average pace</div>
+        <div class="hero-number" id="statDays">—</div>
+        <div class="hero-sub" id="statDaysSub" style="font-size:12.5px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-head">
+    <h2>What to aim for</h2>
+    <svg class="squiggle" viewBox="0 0 400 8" preserveAspectRatio="none"><path d="M0 4 Q 20 0 40 4 T 80 4 T 120 4 T 160 4 T 200 4 T 240 4 T 280 4 T 320 4 T 360 4 T 400 4" stroke="#8B5A83" stroke-width="2" fill="none"/></svg>
+  </div>
+  <p class="section-note">Based on a safe, sustainable pace of <b>0.6 kg / week</b> (within the recommended 0.5–0.75 kg/week range). Rather than closing that gap through food alone, it's split roughly 35% eating a bit less and 65% burning a bit more — so "eat around" stays close to your actual average instead of dropping drastically.</p>
+  <div class="targets-grid" id="targetsGrid"></div>
+
+  <div class="section-head">
+    <h2>How you're actually tracking</h2>
+    <svg class="squiggle" viewBox="0 0 400 8" preserveAspectRatio="none"><path d="M0 4 Q 20 0 40 4 T 80 4 T 120 4 T 160 4 T 200 4 T 240 4 T 280 4 T 320 4 T 360 4 T 400 4" stroke="#C4735F" stroke-width="2" fill="none"/></svg>
+  </div>
+  <p class="section-note">Your logged averages (excl. vacation days) against the targets above, so you can see exactly how far off you are.</p>
+  <div class="targets-grid" id="todayGrid" style="margin-bottom:16px;"></div>
+  <div class="targets-grid" id="compareGrid"></div>
+
+  <div class="two-col" style="margin-top:20px;">
+    <div class="chart-card">
+      <h3>Eaten: you vs. target</h3>
+      <div class="chart-wrap"><canvas id="compareEatChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Burned: you vs. target</h3>
+      <div class="chart-wrap"><canvas id="compareBurnChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <h2>Trends over time</h2>
+    <svg class="squiggle" viewBox="0 0 400 8" preserveAspectRatio="none"><path d="M0 4 Q 20 0 40 4 T 80 4 T 120 4 T 160 4 T 200 4 T 240 4 T 280 4 T 320 4 T 360 4 T 400 4" stroke="#6E8F76" stroke-width="2" fill="none"/></svg>
+  </div>
+  <div class="toggle-row" id="rangeToggle">
+    <button data-range="day" class="active">Day</button>
+    <button data-range="week">Week</button>
+    <button data-range="month">Month</button>
+  </div>
+
+  <div class="chart-card">
+    <h3>Weight trend vs goal</h3>
+    <div class="chart-wrap"><canvas id="weightChart"></canvas></div>
+  </div>
+
+  <div class="chart-card">
+    <h3>Calories eaten vs. burned</h3>
+    <div class="chart-wrap"><canvas id="calChart"></canvas></div>
+  </div>
+
+  <div class="two-col">
+    <div class="chart-card">
+      <h3>Net balance (burned − eaten)</h3>
+      <div class="chart-wrap"><canvas id="netChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Meal breakdown (avg. kcal)</h3>
+      <div class="chart-wrap"><canvas id="mealChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <h2>Daily log</h2>
+    <svg class="squiggle" viewBox="0 0 400 8" preserveAspectRatio="none"><path d="M0 4 Q 20 0 40 4 T 80 4 T 120 4 T 160 4 T 200 4 T 240 4 T 280 4 T 320 4 T 360 4 T 400 4" stroke="#C99A3E" stroke-width="2" fill="none"/></svg>
+  </div>
+  <p class="section-note">Amber rows = vacation days (excluded from averages, still shown for context).</p>
+  <div class="table-scroll">
+    <table>
+      <thead><tr>
+        <th>Date</th><th>B</th><th>L</th><th>D</th><th>S</th><th>Eaten</th><th>Burned</th><th>Net</th><th>Weight</th>
+      </tr></thead>
+      <tbody id="logBody"></tbody>
+    </table>
+  </div>
+
+  <div class="section-head">
+    <h2>Log a new day</h2>
+    <svg class="squiggle" viewBox="0 0 400 8" preserveAspectRatio="none"><path d="M0 4 Q 20 0 40 4 T 80 4 T 120 4 T 160 4 T 200 4 T 240 4 T 280 4 T 320 4 T 360 4 T 400 4" stroke="#C4735F" stroke-width="2" fill="none"/></svg>
+  </div>
+  <form class="entry-form" id="entryForm">
+    <div class="field"><label>Date</label><input type="date" id="f_date" required></div>
+    <div class="field"><label>Breakfast</label><input type="number" id="f_b" placeholder="kcal"></div>
+    <div class="field"><label>Lunch</label><input type="number" id="f_l" placeholder="kcal"></div>
+    <div class="field"><label>Dinner</label><input type="number" id="f_d" placeholder="kcal"></div>
+    <div class="field"><label>Snacks</label><input type="number" id="f_s" placeholder="kcal"></div>
+    <div class="field"><label>Burned</label><input type="number" id="f_burn" placeholder="kcal"></div>
+    <div class="field"><label>Weight (kg)</label><input type="number" step="0.1" id="f_w" placeholder="optional"></div>
+    <div class="field"><label style="display:flex;align-items:center;gap:6px;"><input type="checkbox" id="f_vacay" style="width:auto;">&nbsp;Vacation day</label></div>
+    <button type="submit">Add entry &amp; refresh dashboard</button>
+    <p class="form-note">This adds the entry to the charts and stats for this browser session only — it doesn't write back to your Excel file. Copy new rows into the "Daily Log" sheet there to keep both in sync.</p>
+  </form>
+
+  <footer>
+    Methodology: "Total burned" is your logged total daily energy expenditure. Net = eaten − burned. 1 kg of body fat ≈ 7,700 kcal.
+    Vacation days are shown on charts but excluded from all averages and the days-to-goal estimate, per your preference.
+    This dashboard is for personal tracking and general guidance only, not medical advice — check in with a doctor or dietitian before making significant changes.
+  </footer>
+
+</div>
+
+<script>
+const KCAL_PER_KG = 7700;
+const GOAL_WEIGHT = 62.0;
+const HEIGHT_CM = 157;
+const START_WEIGHT = 71.3;
+const SAFE_KG_PER_WEEK = 0.6;
+const EAT_SHARE_OF_DEFICIT = 0.35;
+const BURN_SHARE_OF_DEFICIT = 0.65;
+
+let DATA = [{"date": "2026-06-08", "breakfast": 290, "lunch": 300, "dinner": 480, "snacks": 1070, "eaten": 2140, "exerciseBurn": 250, "burned": 1828, "net": 312, "weight": 71.3, "vacay": false}, {"date": "2026-06-09", "breakfast": 320, "lunch": 650, "dinner": 380, "snacks": 330, "eaten": 1680, "exerciseBurn": 200, "burned": 1010, "net": 670, "weight": null, "vacay": false}, {"date": "2026-06-10", "breakfast": 230, "lunch": 750, "dinner": 760, "snacks": 270, "eaten": 2010, "exerciseBurn": 300, "burned": 1802, "net": 208, "weight": null, "vacay": false}, {"date": "2026-06-11", "breakfast": 240, "lunch": 490, "dinner": 780, "snacks": 0, "eaten": 1510, "exerciseBurn": 325, "burned": 1420, "net": 90, "weight": null, "vacay": false}, {"date": "2026-06-12", "breakfast": 370, "lunch": 250, "dinner": 770, "snacks": 360, "eaten": 1750, "exerciseBurn": 150, "burned": 1125, "net": 625, "weight": null, "vacay": false}, {"date": "2026-06-13", "breakfast": 230, "lunch": 750, "dinner": 710, "snacks": 200, "eaten": 1890, "exerciseBurn": 275, "burned": 1803, "net": 87, "weight": null, "vacay": false}, {"date": "2026-06-14", "breakfast": 280, "lunch": 800, "dinner": 540, "snacks": 180, "eaten": 1800, "exerciseBurn": 250, "burned": 1771, "net": 29, "weight": null, "vacay": false}, {"date": "2026-06-15", "breakfast": 600, "lunch": 500, "dinner": 810, "snacks": 990, "eaten": 2410, "exerciseBurn": null, "burned": 1705, "net": 705, "weight": 70.9, "vacay": false}, {"date": "2026-06-16", "breakfast": 230, "lunch": 530, "dinner": 510, "snacks": 130, "eaten": 1400, "exerciseBurn": null, "burned": 1688, "net": -288, "weight": null, "vacay": false}, {"date": "2026-06-17", "breakfast": 340, "lunch": 600, "dinner": 550, "snacks": 385, "eaten": 1875, "exerciseBurn": null, "burned": 1710, "net": 165, "weight": null, "vacay": false}, {"date": "2026-06-18", "breakfast": 90, "lunch": 450, "dinner": 410, "snacks": 480, "eaten": 1430, "exerciseBurn": null, "burned": 1510, "net": -80, "weight": null, "vacay": false}, {"date": "2026-06-19", "breakfast": 320, "lunch": 500, "dinner": 300, "snacks": 430, "eaten": 1550, "exerciseBurn": null, "burned": 1442, "net": 108, "weight": null, "vacay": false}, {"date": "2026-06-20", "breakfast": 450, "lunch": 810, "dinner": 0, "snacks": 140, "eaten": 1400, "exerciseBurn": null, "burned": 1840, "net": -440, "weight": null, "vacay": false}, {"date": "2026-06-21", "breakfast": 750, "lunch": 250, "dinner": 520, "snacks": 160, "eaten": 1680, "exerciseBurn": null, "burned": 1830, "net": -150, "weight": null, "vacay": false}, {"date": "2026-06-22", "breakfast": 290, "lunch": 650, "dinner": 350, "snacks": 480, "eaten": 1970, "exerciseBurn": null, "burned": 1716, "net": 254, "weight": 70.5, "vacay": false}, {"date": "2026-06-23", "breakfast": 420, "lunch": 600, "dinner": 270, "snacks": 300, "eaten": 1590, "exerciseBurn": null, "burned": 1708, "net": -118, "weight": null, "vacay": false}, {"date": "2026-06-24", "breakfast": 400, "lunch": 320, "dinner": 720, "snacks": 260, "eaten": 1700, "exerciseBurn": null, "burned": 1618, "net": 82, "weight": null, "vacay": false}, {"date": "2026-06-25", "breakfast": 230, "lunch": 540, "dinner": 840, "snacks": 90, "eaten": 1700, "exerciseBurn": null, "burned": 1774, "net": -74, "weight": null, "vacay": false}, {"date": "2026-06-26", "breakfast": 380, "lunch": 680, "dinner": 640, "snacks": 780, "eaten": 2680, "exerciseBurn": null, "burned": 1800, "net": 880, "weight": null, "vacay": true}, {"date": "2026-06-27", "breakfast": 800, "lunch": 410, "dinner": 700, "snacks": 1210, "eaten": 3120, "exerciseBurn": null, "burned": 2085, "net": 1035, "weight": null, "vacay": true}, {"date": "2026-06-28", "breakfast": 960, "lunch": 790, "dinner": 700, "snacks": 130, "eaten": 2530, "exerciseBurn": null, "burned": 1596, "net": 934, "weight": null, "vacay": true}, {"date": "2026-06-29", "breakfast": 110, "lunch": 650, "dinner": 420, "snacks": 570, "eaten": 1750, "exerciseBurn": null, "burned": 1666, "net": 84, "weight": 71.6, "vacay": false}, {"date": "2026-06-30", "breakfast": 180, "lunch": 530, "dinner": 650, "snacks": 100, "eaten": 1540, "exerciseBurn": null, "burned": 1887, "net": -347, "weight": null, "vacay": false}, {"date": "2026-07-01", "breakfast": 430, "lunch": 470, "dinner": 680, "snacks": 240, "eaten": 1820, "exerciseBurn": null, "burned": 1046, "net": 774, "weight": null, "vacay": false}, {"date": "2026-07-02", "breakfast": 180, "lunch": 520, "dinner": 900, "snacks": 270, "eaten": 1870, "exerciseBurn": null, "burned": 1795, "net": 75, "weight": null, "vacay": false}, {"date": "2026-07-03", "breakfast": 725, "lunch": 650, "dinner": 650, "snacks": 25, "eaten": 2050, "exerciseBurn": null, "burned": 1657, "net": 393, "weight": null, "vacay": false}, {"date": "2026-07-04", "breakfast": 400, "lunch": 500, "dinner": 560, "snacks": 580, "eaten": 2040, "exerciseBurn": null, "burned": 1761, "net": 279, "weight": null, "vacay": false}, {"date": "2026-07-05", "breakfast": 240, "lunch": 510, "dinner": 845, "snacks": 120, "eaten": 1715, "exerciseBurn": null, "burned": 2099, "net": -384, "weight": null, "vacay": false}, {"date": "2026-07-06", "breakfast": 370, "lunch": 600, "dinner": 430, "snacks": 120, "eaten": 1520, "exerciseBurn": null, "burned": 1563, "net": -43, "weight": 70.65, "vacay": false}, {"date": "2026-07-07", "breakfast": 300, "lunch": 600, "dinner": 600, "snacks": 620, "eaten": 2120, "exerciseBurn": null, "burned": 1689, "net": 431, "weight": null, "vacay": false}, {"date": "2026-07-08", "breakfast": 310, "lunch": 410, "dinner": 570, "snacks": 500, "eaten": 1790, "exerciseBurn": null, "burned": 1839, "net": -49, "weight": null, "vacay": false}, {"date": "2026-07-09", "breakfast": 240, "lunch": 700, "dinner": 350, "snacks": 695, "eaten": 1965, "exerciseBurn": null, "burned": 1844, "net": 121, "weight": null, "vacay": false}, {"date": "2026-07-10", "breakfast": 330, "lunch": 600, "dinner": 620, "snacks": 60, "eaten": 1610, "exerciseBurn": null, "burned": 1494, "net": 116, "weight": null, "vacay": false}, {"date": "2026-07-11", "breakfast": 350, "lunch": 450, "dinner": 600, "snacks": 0, "eaten": 1400, "exerciseBurn": null, "burned": 1585, "net": -185, "weight": null, "vacay": false}, {"date": "2026-07-12", "breakfast": 490, "lunch": 0, "dinner": 850, "snacks": 300, "eaten": 1640, "exerciseBurn": null, "burned": 1700, "net": -60, "weight": null, "vacay": false}, {"date": "2026-07-13", "breakfast": 390, "lunch": 600, "dinner": 730, "snacks": 650, "eaten": 2370, "exerciseBurn": null, "burned": 1846, "net": 524, "weight": 70.9, "vacay": false}, {"date": "2026-07-14", "breakfast": 250, "lunch": 500, "dinner": 450, "snacks": 450, "eaten": 1650, "exerciseBurn": null, "burned": 1645, "net": 5, "weight": null, "vacay": false}, {"date": "2026-07-15", "breakfast": 490, "lunch": 450, "dinner": 600, "snacks": 330, "eaten": 1870, "exerciseBurn": null, "burned": 1379, "net": 491, "weight": null, "vacay": false}, {"date": "2026-07-16", "breakfast": 560, "lunch": 300, "dinner": 700, "snacks": 290, "eaten": 1850, "exerciseBurn": null, "burned": 1398, "net": 452, "weight": null, "vacay": false}, {"date": "2026-07-17", "breakfast": 355, "lunch": 700, "dinner": 680, "snacks": 195, "eaten": 2030, "exerciseBurn": null, "burned": 1759, "net": 271, "weight": null, "vacay": false}, {"date": "2026-07-18", "breakfast": 220, "lunch": 280, "dinner": 500, "snacks": 230, "eaten": 1230, "exerciseBurn": null, "burned": 1668, "net": -438, "weight": null, "vacay": false}, {"date": "2026-07-19", "breakfast": 0, "lunch": 700, "dinner": 650, "snacks": 275, "eaten": 1625, "exerciseBurn": null, "burned": 1793, "net": -168, "weight": null, "vacay": false}, {"date": "2026-07-20", "breakfast": 215, "lunch": 500, "dinner": 570, "snacks": 590, "eaten": 1875, "exerciseBurn": null, "burned": 1763, "net": 112, "weight": 70.4, "vacay": false}, {"date": "2026-07-21", "breakfast": 415, "lunch": 400, "dinner": 590, "snacks": 30, "eaten": 1435, "exerciseBurn": null, "burned": 1816, "net": -381, "weight": null, "vacay": false}, {"date": "2026-07-22", "breakfast": 180, "lunch": 640, "dinner": 660, "snacks": 175, "eaten": 1655, "exerciseBurn": null, "burned": 1651, "net": 4, "weight": null, "vacay": false}, {"date": "2026-07-23", "breakfast": 180, "lunch": 430, "dinner": 570, "snacks": 190, "eaten": 1370, "exerciseBurn": null, "burned": 1772, "net": -402, "weight": null, "vacay": false}, {"date": "2026-07-24", "breakfast": 300, "lunch": 340, "dinner": 890, "snacks": 0, "eaten": 1530, "exerciseBurn": null, "burned": 1700, "net": -170, "weight": null, "vacay": false}, {"date": "2026-07-25", "breakfast": 420, "lunch": 240, "dinner": 805, "snacks": 375, "eaten": 1890, "exerciseBurn": null, "burned": 1693, "net": 197, "weight": null, "vacay": false}, {"date": "2026-07-26", "breakfast": 0, "lunch": 550, "dinner": 975, "snacks": 0, "eaten": 1525, "exerciseBurn": null, "burned": 1816, "net": -291, "weight": null, "vacay": false}, {"date": "2026-07-27", "breakfast": 180, "lunch": 850, "dinner": 650, "snacks": 380, "eaten": 2060, "exerciseBurn": null, "burned": 1573, "net": 487, "weight": 70.8, "vacay": false}, {"date": "2026-07-28", "breakfast": 180, "lunch": 650, "dinner": 1150, "snacks": 0, "eaten": 1980, "exerciseBurn": null, "burned": 1848, "net": 132, "weight": null, "vacay": false}, {"date": "2026-07-29", "breakfast": 0, "lunch": 600, "dinner": 450, "snacks": 650, "eaten": 1700, "exerciseBurn": null, "burned": 1886, "net": -186, "weight": null, "vacay": false}, {"date": "2026-07-30", "breakfast": 0, "lunch": 350, "dinner": 750, "snacks": 250, "eaten": 1350, "exerciseBurn": null, "burned": 1750, "net": -400, "weight": null, "vacay": false}, {"date": "2026-07-31", "breakfast": 0, "lunch": 700, "dinner": 300, "snacks": 700, "eaten": 1700, "exerciseBurn": null, "burned": 2021, "net": -321, "weight": null, "vacay": false}, {"date": "2026-08-01", "breakfast": 750, "lunch": 0, "dinner": 650, "snacks": 350, "eaten": 1750, "exerciseBurn": null, "burned": 2647, "net": -897, "weight": null, "vacay": false}, {"date": "2026-08-02", "breakfast": 750, "lunch": 0, "dinner": 750, "snacks": 0, "eaten": 1500, "exerciseBurn": null, "burned": 1931, "net": -431, "weight": null, "vacay": false}, {"date": "2026-08-03", "breakfast": 250, "lunch": 480, "dinner": 680, "snacks": 0, "eaten": 1418, "exerciseBurn": null, "burned": 1856, "net": -438, "weight": 70.8, "vacay": false}, {"date": "2026-08-04", "breakfast": 180, "lunch": 800, "dinner": 870, "snacks": 80, "eaten": 1950, "exerciseBurn": null, "burned": 2114, "net": -164, "weight": null, "vacay": false}, {"date": "2026-08-05", "breakfast": 440, "lunch": 830, "dinner": 240, "snacks": 0, "eaten": 1510, "exerciseBurn": null, "burned": 1950, "net": -440, "weight": null, "vacay": false}, {"date": "2026-08-06", "breakfast": 250, "lunch": 680, "dinner": 487, "snacks": 500, "eaten": 1920, "exerciseBurn": null, "burned": 2091, "net": -171, "weight": null, "vacay": false}, {"date": "2026-08-07", "breakfast": 250, "lunch": 650, "dinner": 600, "snacks": 275, "eaten": 1775, "exerciseBurn": null, "burned": 2091, "net": -316, "weight": null, "vacay": false}, {"date": "2026-08-08", "breakfast": 0, "lunch": 850, "dinner": 500, "snacks": 0, "eaten": 1350, "exerciseBurn": null, "burned": 1650, "net": -300, "weight": null, "vacay": false}, {"date": "2026-08-09", "breakfast": 600, "lunch": 0, "dinner": 890, "snacks": 400, "eaten": 1890, "exerciseBurn": null, "burned": 1806, "net": 84, "weight": null, "vacay": false}, {"date": "2026-08-10", "breakfast": 250, "lunch": 500, "dinner": 450, "snacks": 540, "eaten": 1740, "exerciseBurn": null, "burned": 1830, "net": -90, "weight": 71.0, "vacay": false}, {"date": "2026-08-11", "breakfast": 0, "lunch": 800, "dinner": 1250, "snacks": 0, "eaten": 2050, "exerciseBurn": null, "burned": 1700, "net": 350, "weight": null, "vacay": false}, {"date": "2026-08-12", "breakfast": 100, "lunch": 650, "dinner": 900, "snacks": 450, "eaten": 2100, "exerciseBurn": null, "burned": 1700, "net": 400, "weight": null, "vacay": false}, {"date": "2026-08-13", "breakfast": 200, "lunch": 500, "dinner": 500, "snacks": 500, "eaten": 1700, "exerciseBurn": null, "burned": 1650, "net": 50, "weight": null, "vacay": false}, {"date": "2026-08-14", "breakfast": 180, "lunch": 500, "dinner": 500, "snacks": 150, "eaten": 1330, "exerciseBurn": null, "burned": 1922, "net": -592, "weight": null, "vacay": false}, {"date": "2026-08-15", "breakfast": 300, "lunch": 300, "dinner": 1700, "snacks": 0, "eaten": 2300, "exerciseBurn": null, "burned": 1997, "net": 303, "weight": null, "vacay": false}, {"date": "2026-08-16", "breakfast": 250, "lunch": 780, "dinner": 500, "snacks": 180, "eaten": 1710, "exerciseBurn": null, "burned": 1818, "net": -108, "weight": null, "vacay": false}, {"date": "2026-08-17", "breakfast": 250, "lunch": 500, "dinner": 750, "snacks": 690, "eaten": 2190, "exerciseBurn": null, "burned": 1770, "net": 420, "weight": 71.3, "vacay": false}, {"date": "2026-08-18", "breakfast": 300, "lunch": 500, "dinner": 600, "snacks": 180, "eaten": 1580, "exerciseBurn": null, "burned": 1739, "net": -159, "weight": null, "vacay": false}, {"date": "2026-08-19", "breakfast": 80, "lunch": 600, "dinner": 500, "snacks": 830, "eaten": 2010, "exerciseBurn": null, "burned": 1923, "net": 87, "weight": null, "vacay": false}, {"date": "2026-08-20", "breakfast": 490, "lunch": 500, "dinner": 750, "snacks": 0, "eaten": 1740, "exerciseBurn": null, "burned": 1856, "net": -116, "weight": null, "vacay": false}, {"date": "2026-08-21", "breakfast": 0, "lunch": 500, "dinner": 450, "snacks": 430, "eaten": 1380, "exerciseBurn": null, "burned": 1053, "net": 327, "weight": null, "vacay": false}, {"date": "2026-08-22", "breakfast": 0, "lunch": 550, "dinner": 600, "snacks": 70, "eaten": 1220, "exerciseBurn": null, "burned": 1011, "net": 209, "weight": null, "vacay": false}, {"date": "2026-08-23", "breakfast": 0, "lunch": 250, "dinner": 850, "snacks": 360, "eaten": 1460, "exerciseBurn": null, "burned": 1902, "net": -442, "weight": null, "vacay": false}, {"date": "2026-08-24", "breakfast": 120, "lunch": 600, "dinner": 550, "snacks": 630, "eaten": 1900, "exerciseBurn": null, "burned": 1643, "net": 257, "weight": 71.2, "vacay": false}, {"date": "2026-08-25", "breakfast": 355, "lunch": null, "dinner": null, "snacks": null, "eaten": null, "exerciseBurn": null, "burned": null, "net": null, "weight": null, "vacay": false}];
+
+function fmt(n, d=0){ return n===null||n===undefined||isNaN(n) ? '—' : Number(n).toFixed(d); }
+function parseDate(s){ return new Date(s+'T00:00:00'); }
+
+function latestWeight(){
+  for(let i=DATA.length-1;i>=0;i--){ if(DATA[i].weight!=null) return {w:DATA[i].weight, d:DATA[i].date}; }
+  return {w:START_WEIGHT, d:DATA[0].date};
+}
+
+function avgExclVacay(field){
+  const vals = DATA.filter(r=>!r.vacay && r[field]!=null).map(r=>r[field]);
+  if(!vals.length) return null;
+  return vals.reduce((a,b)=>a+b,0)/vals.length;
+}
+
+function render(){
+  DATA.sort((a,b)=> a.date < b.date ? -1 : 1);
+  const {w: curW, d: curD} = latestWeight();
+  const toGo = curW - GOAL_WEIGHT;
+  const avgEaten = avgExclVacay('eaten');
+  const avgBurned = avgExclVacay('burned');
+  const avgDeficit = (avgEaten!=null && avgBurned!=null) ? (avgBurned - avgEaten) : null;
+
+  document.getElementById('lastUpdated').textContent = 'Last entry: ' + curD;
+  document.getElementById('heroToGo').textContent = fmt(toGo,1) + ' kg';
+  document.getElementById('statCurrent').textContent = fmt(curW,1) + ' kg';
+
+  const daysCard = document.getElementById('statDaysCard');
+  const daysEl = document.getElementById('statDays');
+  const daysSub = document.getElementById('statDaysSub');
+  if(avgDeficit!=null && avgDeficit>0){
+    const days = (toGo*KCAL_PER_KG)/avgDeficit;
+    daysEl.textContent = Math.round(days) + ' days';
+    daysSub.textContent = '≈ ' + fmt(days/7,1) + ' weeks, based on your ' + Math.round(avgDeficit) + ' kcal/day average deficit';
+    daysCard.className='stat-card good';
+  } else {
+    daysEl.textContent = 'Not yet';
+    daysSub.textContent = 'Your logged average is roughly maintenance (' + fmt(avgDeficit,0) + ' kcal/day) — see targets below for a deficit that would get you moving toward goal.';
+    daysCard.className='stat-card warn';
+  }
+
+  const dailyDeficitNeeded = SAFE_KG_PER_WEEK*KCAL_PER_KG/7;
+  const baseEaten = avgEaten!=null ? avgEaten : 1800;
+  const baseBurned = avgBurned!=null ? avgBurned : 1800;
+  const targetEatDaily = baseEaten - EAT_SHARE_OF_DEFICIT*dailyDeficitNeeded;
+  const targetBurnDaily = baseBurned + BURN_SHARE_OF_DEFICIT*dailyDeficitNeeded;
+  const weeksAtSafePace = toGo / SAFE_KG_PER_WEEK;
+  const grid = document.getElementById('targetsGrid');
+  grid.innerHTML = `
+    <div class="target-card">
+      <h3>Per day</h3>
+      <div class="target-row"><span>Eat around</span><span>${fmt(targetEatDaily,0)} kcal</span></div>
+      <div class="target-row"><span>Burn around</span><span>${fmt(targetBurnDaily,0)} kcal</span></div>
+      <div class="target-row"><span>Target deficit</span><span>${fmt(dailyDeficitNeeded,0)} kcal</span></div>
+    </div>
+    <div class="target-card">
+      <h3>Per week</h3>
+      <div class="target-row"><span>Eat around</span><span>${fmt(targetEatDaily*7,0)} kcal</span></div>
+      <div class="target-row"><span>Burn around</span><span>${fmt(targetBurnDaily*7,0)} kcal</span></div>
+      <div class="target-row"><span>Target deficit</span><span>${fmt(dailyDeficitNeeded*7,0)} kcal</span></div>
+      <div class="target-row"><span>Weight loss</span><span>${SAFE_KG_PER_WEEK.toFixed(1)} kg</span></div>
+    </div>
+    <div class="target-card">
+      <h3>Per month (≈30 days)</h3>
+      <div class="target-row"><span>Eat around</span><span>${fmt(targetEatDaily*30,0)} kcal</span></div>
+      <div class="target-row"><span>Burn around</span><span>${fmt(targetBurnDaily*30,0)} kcal</span></div>
+      <div class="target-row"><span>Target deficit</span><span>${fmt(dailyDeficitNeeded*30,0)} kcal</span></div>
+      <div class="target-row"><span>Weight loss</span><span>${fmt(SAFE_KG_PER_WEEK*30/7,1)} kg</span></div>
+    </div>
+    <div class="target-card">
+      <h3>At this safe pace</h3>
+      <div class="target-row"><span>Weeks to goal</span><span>${fmt(weeksAtSafePace,1)}</span></div>
+      <div class="target-row"><span>Current BMI</span><span>${fmt(curW/((HEIGHT_CM/100)**2),1)}</span></div>
+      <div class="target-row"><span>Goal BMI</span><span>${fmt(GOAL_WEIGHT/((HEIGHT_CM/100)**2),1)}</span></div>
+    </div>`;
+
+  renderComparison(avgEaten, avgBurned, avgDeficit, targetEatDaily, targetBurnDaily, dailyDeficitNeeded);
+  renderToday(targetEatDaily, targetBurnDaily);
+  renderCompareCharts(avgEaten, avgBurned, targetEatDaily, targetBurnDaily);
+
+  drawSparkline(curW);
+  drawTable();
+  drawCharts(currentRange);
+}
+
+function sumMeals(r){
+  const parts=[r.breakfast,r.lunch,r.dinner,r.snacks];
+  if(parts.every(p=>p==null)) return null;
+  return parts.reduce((a,b)=>a+(b||0),0);
+}
+
+function renderToday(targetEatDaily, targetBurnDaily){
+  const today = DATA[DATA.length-1];
+  const eatenSoFar = today.eaten!=null ? today.eaten : sumMeals(today);
+  const burnedSoFar = today.burned;
+
+  const remainEat = (eatenSoFar!=null) ? targetEatDaily - eatenSoFar : null;
+  const remainBurn = (burnedSoFar!=null) ? targetBurnDaily - burnedSoFar : null;
+
+  const eatLine = remainEat==null
+    ? '<div class="gap-line"><span class="gap-dot"></span>No meals logged yet today</div>'
+    : remainEat>=0
+      ? `<div class="gap-line good"><span class="gap-dot"></span>You can still eat ~${fmt(remainEat,0)} kcal</div>`
+      : `<div class="gap-line bad"><span class="gap-dot"></span>${fmt(Math.abs(remainEat),0)} kcal over target already</div>`;
+
+  const burnLine = remainBurn==null
+    ? '<div class="gap-line"><span class="gap-dot"></span>Burn not logged yet today</div>'
+    : remainBurn>0
+      ? `<div class="gap-line bad"><span class="gap-dot"></span>Burn ~${fmt(remainBurn,0)} kcal more to hit target</div>`
+      : `<div class="gap-line good"><span class="gap-dot"></span>Target burn already reached</div>`;
+
+  document.getElementById('todayGrid').innerHTML = `
+    <div class="target-card today-card">
+      <h3>Today · ${today.date}</h3>
+      <div class="target-row"><span>Eaten so far</span><span>${eatenSoFar!=null?fmt(eatenSoFar,0)+' kcal':'—'}</span></div>
+      <div class="target-row"><span>Target for today</span><span>${fmt(targetEatDaily,0)} kcal</span></div>
+      ${eatLine}
+    </div>
+    <div class="target-card today-card">
+      <h3>Today · ${today.date}</h3>
+      <div class="target-row"><span>Burned so far</span><span>${burnedSoFar!=null?fmt(burnedSoFar,0)+' kcal':'—'}</span></div>
+      <div class="target-row"><span>Target burn today</span><span>${fmt(targetBurnDaily,0)} kcal</span></div>
+      ${burnLine}
+    </div>`;
+}
+
+function renderCompareCharts(avgEaten, avgBurned, targetEatDaily, targetBurnDaily){
+  const today = DATA[DATA.length-1];
+  const todayEaten = today.eaten!=null ? today.eaten : sumMeals(today);
+  const todayBurned = today.burned;
+
+  const cats = ['Today','Daily avg','Weekly avg','Monthly avg'];
+  const mults = [1,1,7,30];
+
+  const eatenYou = [todayEaten, avgEaten, avgEaten!=null?avgEaten*7:null, avgEaten!=null?avgEaten*30:null];
+  const eatenTarget = mults.map(m=>targetEatDaily*m);
+  const burnedYou = [todayBurned, avgBurned, avgBurned!=null?avgBurned*7:null, avgBurned!=null?avgBurned*30:null];
+  const burnedTarget = mults.map(m=>targetBurnDaily*m);
+
+  destroy('compareEat');
+  charts.compareEat = new Chart(document.getElementById('compareEatChart'), {
+    type:'bar',
+    data:{ labels:cats, datasets:[
+      { label:'You', data:eatenYou, backgroundColor:'#C4735F' },
+      { label:'Target', data:eatenTarget, backgroundColor:'#C99A3E' }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}, scales:{y:{title:{display:true,text:'kcal'}}} }
+  });
+
+  destroy('compareBurn');
+  charts.compareBurn = new Chart(document.getElementById('compareBurnChart'), {
+    type:'bar',
+    data:{ labels:cats, datasets:[
+      { label:'You', data:burnedYou, backgroundColor:'#6E8F76' },
+      { label:'Target', data:burnedTarget, backgroundColor:'#8B5A83' }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}, scales:{y:{title:{display:true,text:'kcal'}}} }
+  });
+}
+
+function gapLine(diff, unit, goodWhenPositive=true){
+  if(diff==null || isNaN(diff)) return '<div class="gap-line"><span class="gap-dot"></span>Not enough data yet</div>';
+  const isGood = goodWhenPositive ? diff>=0 : diff<=0;
+  const cls = isGood ? 'good' : 'bad';
+  const word = isGood ? (Math.abs(diff)<1 ? 'Right on target' : 'ahead of target by') : 'short of target by';
+  const amount = Math.abs(diff)<1 ? '' : fmt(Math.abs(diff),0)+' '+unit;
+  return `<div class="gap-line ${cls}"><span class="gap-dot"></span>${word} ${amount}</div>`;
+}
+
+function renderComparison(avgEaten, avgBurned, avgDeficit, targetEatDaily, targetBurnDaily, dailyDeficitNeeded){
+  const grid = document.getElementById('compareGrid');
+  const periods = [
+    {label:'Per day', mult:1, unit:'kcal/day'},
+    {label:'Per week', mult:7, unit:'kcal/week'},
+    {label:'Per month (≈30 days)', mult:30, unit:'kcal/month'}
+  ];
+  grid.innerHTML = periods.map(p=>{
+    const curEaten = avgEaten!=null ? avgEaten*p.mult : null;
+    const curBurned = avgBurned!=null ? avgBurned*p.mult : null;
+    const curDeficit = avgDeficit!=null ? avgDeficit*p.mult : null;
+    const tgtEaten = targetEatDaily*p.mult;
+    const tgtBurned = targetBurnDaily*p.mult;
+    const tgtDeficit = dailyDeficitNeeded*p.mult;
+    const deficitGap = (curDeficit!=null) ? (curDeficit - tgtDeficit) : null;
+    return `
+    <div class="target-card">
+      <h3>${p.label}</h3>
+      <div class="target-row"><span>You're eating</span><span>${fmt(curEaten,0)} kcal</span></div>
+      <div class="target-row"><span>Target eat</span><span>${fmt(tgtEaten,0)} kcal</span></div>
+      <div class="target-row"><span>You're burning</span><span>${fmt(curBurned,0)} kcal</span></div>
+      <div class="target-row"><span>Target burn</span><span>${fmt(tgtBurned,0)} kcal</span></div>
+      <div class="target-row"><span>Your deficit</span><span>${fmt(curDeficit,0)} kcal</span></div>
+      <div class="target-row"><span>Target deficit</span><span>${fmt(tgtDeficit,0)} kcal</span></div>
+      ${gapLine(deficitGap, p.unit, true)}
+    </div>`;
+  }).join('');
+}
+
+function drawSparkline(curW){
+  const svg = document.getElementById('sparkline');
+  const weighed = DATA.filter(r=>r.weight!=null);
+  if(weighed.length<2){ svg.innerHTML=''; return; }
+  const w=380,h=180,pad=10;
+  const xs = weighed.map((r,i)=>i);
+  const ys = weighed.map(r=>r.weight);
+  const minY = Math.min(...ys, GOAL_WEIGHT)-0.3, maxY = Math.max(...ys)+0.3;
+  const sx = i => pad + i*( (w-2*pad) / (xs.length-1) );
+  const sy = v => h-pad - ( (v-minY)/(maxY-minY) )*(h-2*pad);
+  function jit(i,seed){ return Math.sin(i*12.9898+seed)*3; }
+  let d = '';
+  weighed.forEach((r,i)=>{
+    const x = sx(i)+jit(i,3.1);
+    const y = sy(r.weight)+jit(i,7.7);
+    d += (i===0?'M':'L') + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+  });
+  const goalY = sy(GOAL_WEIGHT);
+  svg.innerHTML = `
+    <line x1="${pad}" y1="${goalY}" x2="${w-pad}" y2="${goalY}" stroke="#C99A3E" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.8"/>
+    <path d="${d}" fill="none" stroke="#8B5A83" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+    <circle cx="${sx(xs.length-1)}" cy="${sy(curW)}" r="4.5" fill="#8B5A83"/>
+  `;
+}
+
+function netClass(n){ return n>0 ? 'net-pos' : (n<0 ? 'net-neg' : ''); }
+
+function drawTable(){
+  const body = document.getElementById('logBody');
+  body.innerHTML = DATA.slice().reverse().map(r=>`
+    <tr class="${r.vacay?'vacay':''}">
+      <td>${r.date}${r.vacay?' 🏖':''}</td>
+      <td>${r.breakfast??'—'}</td><td>${r.lunch??'—'}</td><td>${r.dinner??'—'}</td><td>${r.snacks??'—'}</td>
+      <td>${r.eaten??'—'}</td><td>${r.burned??'—'}</td>
+      <td class="${r.net!=null?netClass(r.net):''}">${r.net??'—'}</td>
+      <td>${r.weight??'—'}</td>
+    </tr>`).join('');
+}
+
+let charts = {};
+let currentRange = 'day';
+
+function aggregate(range){
+  if(range==='day') return DATA.map(r=>({label:r.date.slice(5), eaten:r.eaten, burned:r.burned, net: r.net, weight:r.weight, b:r.breakfast,l:r.lunch,d:r.dinner,s:r.snacks, vacay:r.vacay}));
+  const buckets = {};
+  DATA.forEach(r=>{
+    const dt = parseDate(r.date);
+    let key;
+    if(range==='week'){
+      const monday = new Date(dt); monday.setDate(dt.getDate()-((dt.getDay()+6)%7));
+      key = monday.toISOString().slice(5,10);
+    } else {
+      key = r.date.slice(0,7);
+    }
+    if(!buckets[key]) buckets[key]={eaten:[],burned:[],weight:null,b:[],l:[],d:[],s:[]};
+    if(!r.vacay){
+      if(r.eaten!=null) buckets[key].eaten.push(r.eaten);
+      if(r.burned!=null) buckets[key].burned.push(r.burned);
+      if(r.breakfast!=null) buckets[key].b.push(r.breakfast);
+      if(r.lunch!=null) buckets[key].l.push(r.lunch);
+      if(r.dinner!=null) buckets[key].d.push(r.dinner);
+      if(r.snacks!=null) buckets[key].s.push(r.snacks);
+    }
+    if(r.weight!=null) buckets[key].weight = r.weight;
+  });
+  const avg = a => a.length? a.reduce((x,y)=>x+y,0)/a.length : null;
+  return Object.keys(buckets).sort().map(k=>{
+    const bkt = buckets[k];
+    const e = avg(bkt.eaten), bnd = avg(bkt.burned);
+    return {label:k, eaten:e, burned:bnd, net: (e!=null&&bnd!=null)? bnd-e : null, weight:bkt.weight,
+             b:avg(bkt.b), l:avg(bkt.l), d:avg(bkt.d), s:avg(bkt.s)};
+  });
+}
+
+function destroy(id){ if(charts[id]){ charts[id].destroy(); } }
+
+function drawCharts(range){
+  const agg = aggregate(range);
+  const labels = agg.map(r=>r.label);
+
+  destroy('weight');
+  charts.weight = new Chart(document.getElementById('weightChart'), {
+    type:'line',
+    data:{ labels, datasets:[
+      { label:'Weight (kg)', data: agg.map(r=>r.weight), spanGaps:true, borderColor:'#8B5A83', backgroundColor:'#8B5A8322', tension:.3, pointRadius:3 },
+      { label:'Goal', data: labels.map(()=>GOAL_WEIGHT), borderColor:'#C99A3E', borderDash:[6,4], pointRadius:0 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}, scales:{y:{title:{display:true,text:'kg'}}} }
+  });
+
+  destroy('cal');
+  charts.cal = new Chart(document.getElementById('calChart'), {
+    type:'line',
+    data:{ labels, datasets:[
+      { label:'Eaten', data: agg.map(r=>r.eaten), borderColor:'#C4735F', backgroundColor:'#C4735F22', tension:.3, fill:true },
+      { label:'Burned', data: agg.map(r=>r.burned), borderColor:'#6E8F76', backgroundColor:'#6E8F7622', tension:.3, fill:true }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}, scales:{y:{title:{display:true,text:'kcal'}}} }
+  });
+
+  destroy('net');
+  charts.net = new Chart(document.getElementById('netChart'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'Net (burned - eaten)', data: agg.map(r=>r.net),
+        backgroundColor: agg.map(r=> (r.net==null)?'#ccc' : (r.net>=0?'#6E8F76':'#C4735F')) }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{title:{display:true,text:'kcal'}}} }
+  });
+
+  destroy('meal');
+  charts.meal = new Chart(document.getElementById('mealChart'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'Breakfast', data: agg.map(r=>r.b), backgroundColor:'#C99A3E' },
+      { label:'Lunch', data: agg.map(r=>r.l), backgroundColor:'#6E8F76' },
+      { label:'Dinner', data: agg.map(r=>r.d), backgroundColor:'#8B5A83' },
+      { label:'Snacks', data: agg.map(r=>r.s), backgroundColor:'#C4735F' }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}, scales:{x:{stacked:true}, y:{stacked:true,title:{display:true,text:'kcal'}}} }
+  });
+}
+
+document.getElementById('rangeToggle').addEventListener('click', e=>{
+  if(e.target.tagName!=='BUTTON') return;
+  document.querySelectorAll('#rangeToggle button').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  currentRange = e.target.dataset.range;
+  drawCharts(currentRange);
+});
+
+document.getElementById('entryForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const date = document.getElementById('f_date').value;
+  if(!date){ return; }
+  const b = parseFloat(document.getElementById('f_b').value) || 0;
+  const l = parseFloat(document.getElementById('f_l').value) || 0;
+  const d = parseFloat(document.getElementById('f_d').value) || 0;
+  const s = parseFloat(document.getElementById('f_s').value) || 0;
+  const burn = document.getElementById('f_burn').value ? parseFloat(document.getElementById('f_burn').value) : null;
+  const wVal = document.getElementById('f_w').value ? parseFloat(document.getElementById('f_w').value) : null;
+  const vacay = document.getElementById('f_vacay').checked;
+  const eaten = b+l+d+s;
+  const net = (burn!=null) ? eaten-burn : null;
+
+  const existingIdx = DATA.findIndex(r=>r.date===date);
+  const entry = {date, breakfast:b, lunch:l, dinner:d, snacks:s, eaten, exerciseBurn:null, burned:burn, net, weight:wVal, vacay};
+  if(existingIdx>=0) DATA[existingIdx]=entry; else DATA.push(entry);
+
+  e.target.reset();
+  render();
+});
+
+document.getElementById('f_date').value = DATA[DATA.length-1].date;
+render();
+</script>
+</body>
+</html>
